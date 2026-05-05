@@ -51,6 +51,8 @@ namespace JipperKeyViewer.KeyViewer
         ConcurrentQueue<long> PressTimes;
         Stopwatch Stopwatch;
         bool Save;
+        long lastFrameMs;
+        const long MAX_DELTA_MS = 50;
         bool KeyChangeExpanded;
         bool TextChangeExpanded;
         bool[] ColorExpanded;
@@ -162,13 +164,15 @@ namespace JipperKeyViewer.KeyViewer
 
             if (Stopwatch == null)
             {
-                // 立即创建并启动 Stopwatch
                 Stopwatch = Stopwatch.StartNew();
-                return; // 这次跳过，下次再更新
+                lastFrameMs = 0;
+                return;
             }
             if (Keys == null || Keys.Length == 0) return;
 
-            long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
+            long now = Stopwatch.ElapsedMilliseconds;
+            float deltaMs = lastFrameMs == 0 ? 0 : Mathf.Min(MAX_DELTA_MS, now - lastFrameMs);
+            lastFrameMs = now;
 
             for (int i = 0; i < Keys.Length; i++)
             {
@@ -182,13 +186,11 @@ namespace JipperKeyViewer.KeyViewer
                     RawRain rain = key.rainList[j];
                     if (rain.removed) continue;
 
-                    // 关键：只有最后一个雨滴在按键持续按下时更新大小
                     bool updateSize = isKeyPressed && j == key.rainList.Count - 1;
-
                     float rainSpeed = GetRainSpeedForKey(i);
                     float rainHeight = GetRainTravelDistanceForKey(i);
 
-                    if (!rain.UpdateLocation(elapsedMilliseconds, updateSize, rainSpeed, rainHeight))
+                    if (!rain.UpdateLocation(deltaMs, updateSize, rainSpeed, rainHeight))
                     {
                         rain.removed = true;
                         key.rainList.RemoveAt(j);
@@ -211,8 +213,7 @@ namespace JipperKeyViewer.KeyViewer
         {
             if (key == null || key.rain == null) return;
 
-            long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
-            RawRain rawRain = new RawRain(key.rain.transform, elapsedMilliseconds, key.color);
+            RawRain rawRain = new RawRain(key.rain.transform, key.color);
             key.rawRainQueue.Enqueue(rawRain);
             key.rainList.Add(rawRain);
         }

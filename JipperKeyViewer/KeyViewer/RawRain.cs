@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace JipperKeyViewer.KeyViewer
@@ -10,22 +5,23 @@ namespace JipperKeyViewer.KeyViewer
     public class RawRain
     {
         public Transform transform;
-        public long startTime;
+        public float localTime; // accumulated simulated time (ms)
         public byte color;
         public Vector2 FinalSize;
         public Vector2? sizeDelta;
         public Vector2? anchoredPosition;
         public bool removed;
 
-        public bool UpdateLocation(long time, bool updateSize, float speed, float height)
+        public bool UpdateLocation(float deltaMs, bool updateSize, float speed, float height)
         {
-            float y = (time - startTime) / 300f * speed;
+            localTime += deltaMs;
+            float y = localTime / 300f * speed;
             if (updateSize) FinalSize = new Vector2(color switch
             {
                 0 => 50,
                 3 => 30,
                 _ => 40
-            }, (time - startTime) / 300f * speed);
+            }, localTime / 300f * speed);
             if (y > height)
             {
                 float sizeY = FinalSize.y - y + height;
@@ -40,11 +36,12 @@ namespace JipperKeyViewer.KeyViewer
             }
             return true;
         }
-        public RawRain(Transform transform, long startTime, byte color)
+
+        public RawRain(Transform transform, byte color)
         {
             this.transform = transform;
-            this.startTime = startTime;
             this.color = color;
+            localTime = 0;
         }
     }
 }
