@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,13 +14,14 @@ namespace JipperKeyViewer.KeyViewer
         public GameObject rain;
         public byte color;
         public List<RawRain> rainList = new List<RawRain>();
-        public ConcurrentQueue<RawRain> rawRainQueue = new ConcurrentQueue<RawRain>();
+        public Queue<RawRain> rawRainQueue = new Queue<RawRain>();
         public bool isPressed;
 
-        private void Update()
+        public void ProcessRainQueue()
         {
-            while (rawRainQueue.TryDequeue(out RawRain rawRain))
+            while (rawRainQueue.Count > 0)
             {
+                RawRain rawRain = rawRainQueue.Dequeue();
                 Rain rainComponent = KeyViewer.instance.GetRainFromPool(rain.transform);
                 rainComponent.rawRain = rawRain;
                 rainComponent.image.color = color switch
@@ -36,7 +36,8 @@ namespace JipperKeyViewer.KeyViewer
 
         private void OnDestroy()
         {
-            while (rawRainQueue.TryDequeue(out _)) { }
+            while (rawRainQueue.Count > 0)
+                rawRainQueue.Dequeue();
             foreach (RawRain rawRain in rainList)
             {
                 rawRain.removed = true;

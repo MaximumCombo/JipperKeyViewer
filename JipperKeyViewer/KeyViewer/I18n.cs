@@ -117,7 +117,7 @@ namespace JipperKeyViewer.KeyViewer
             get
             {
                 string modPath = Path.GetDirectoryName(Main.Mod?.Path);
-                return Path.Combine(modPath ?? ".", "lang.json");
+                return Path.Combine(modPath ?? ".", "lang", "lang.json");
             }
         }
 

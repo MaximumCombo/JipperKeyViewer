@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -48,7 +47,7 @@ namespace JipperKeyViewer.KeyViewer
         int lastKps;
         int lastTotal;
         Key Total;
-        ConcurrentQueue<long> PressTimes;
+        Queue<long> PressTimes;
         Stopwatch Stopwatch;
         bool Save;
         long lastFrameMs;
@@ -67,7 +66,7 @@ namespace JipperKeyViewer.KeyViewer
             get
             {
                 string modPath = Path.GetDirectoryName(Main.Mod?.Path);
-                return Path.Combine(modPath ?? Application.persistentDataPath, "settings.json");
+                return Path.Combine(modPath ?? Application.persistentDataPath, "config", "settings.json");
             }
         }
         // 缓存加载的资源
@@ -148,6 +147,7 @@ namespace JipperKeyViewer.KeyViewer
                 ProcessKeySelection();
                 // 在主线程中处理按键状态、计数、KPS、保存设置
                 ProcessMainAndFootKeysInUpdate();
+                ProcessKeyRainQueues();
                 ProcessKpsAndSaveInUpdate();
 
                 if (Settings.EnableRainEffect)
@@ -180,6 +180,9 @@ namespace JipperKeyViewer.KeyViewer
                 if (key == null || key.rainList.Count == 0) continue;
 
                 bool isKeyPressed = key.isPressed;
+                // 每键只查一次行参数，避免雨滴内循环重复 if 链
+                float rainSpeed = GetRainSpeedForKey(i);
+                float rainHeight = GetRainTravelDistanceForKey(i);
 
                 for (int j = 0; j < key.rainList.Count; j++)
                 {
@@ -187,8 +190,6 @@ namespace JipperKeyViewer.KeyViewer
                     if (rain.removed) continue;
 
                     bool updateSize = isKeyPressed && j == key.rainList.Count - 1;
-                    float rainSpeed = GetRainSpeedForKey(i);
-                    float rainHeight = GetRainTravelDistanceForKey(i);
 
                     if (!rain.UpdateLocation(deltaMs, updateSize, rainSpeed, rainHeight))
                     {
@@ -1246,7 +1247,7 @@ namespace JipperKeyViewer.KeyViewer
                     break;
             }
             Object.DontDestroyOnLoad(KeyViewerObject);
-            PressTimes = new ConcurrentQueue<long>();
+            PressTimes = new Queue<long>();
             Stopwatch = Stopwatch.StartNew();
         }
         private void DisableKeyViewer()
@@ -1285,6 +1286,15 @@ namespace JipperKeyViewer.KeyViewer
                 Total.value.text = lastTotal.ToString();
             }
         }
+        private void ProcessKeyRainQueues()
+        {
+            if (Keys == null) return;
+            for (int i = 0; i < Keys.Length; i++)
+            {
+                if (Keys[i] != null)
+                    Keys[i].ProcessRainQueue();
+            }
+        }
         private void ProcessKeyGroup(KeyCode[] keyCodes, int baseIndex, long elapsedMs)
         {
             for (int i = 0; i < keyCodes.Length; i++)
@@ -1316,9 +1326,9 @@ namespace JipperKeyViewer.KeyViewer
             if (PressTimes != null)
             {
                 long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
-                while (PressTimes.TryPeek(out long result) && elapsedMilliseconds - result > 1000)
+                while (PressTimes.Count > 0 && elapsedMilliseconds - PressTimes.Peek() > 1000)
                 {
-                    PressTimes.TryDequeue(out _);
+                    PressTimes.Dequeue();
                 }
                 int currentKps = PressTimes.Count;
                 if (lastKps != currentKps)
@@ -1352,8 +1362,9 @@ namespace JipperKeyViewer.KeyViewer
             foreach (var key in Keys)
             {
                 if (key == null) continue;
-                while (key.rawRainQueue.TryDequeue(out var rain))
+                while (key.rawRainQueue.Count > 0)
                 {
+                    var rain = key.rawRainQueue.Dequeue();
                     if (rain != null && rain.transform != null && rain.transform.gameObject != null)
                         Destroy(rain.transform.gameObject);
                 }
@@ -1487,12 +1498,9 @@ namespace JipperKeyViewer.KeyViewer
         }
         private Key CreateKey(int i, float x, float y, float sizeX, int raining, bool slim = false, bool count = true)
         {
-            // 检查缓存的资源是否可用
-            if (keyBackgroundSprite == null || keyOutlineSprite == null || defaultFont == null)
-            {
-                Debug.LogError($"KeyViewer: 在创建按键 {i} 时，资源尚未加载或加载失败。无法创建按键。");
-                return null; // 资源未加载，返回 null
-            }
+            // 资源未加载时 fallback 到纯色块
+            if (defaultFont == null)
+                defaultFont = arialFont;
             GameObject obj = new("Key " + i);
             KeyViewerSettings settings = Settings;
             RectTransform transform = obj.AddComponent<RectTransform>();
@@ -1517,10 +1525,12 @@ namespace JipperKeyViewer.KeyViewer
             transform.localScale = new Vector3(0.5f, 0.5f);
             image = gameObject.AddComponent<Image>();
             image.color = settings.Background;
-            image.sprite = keyBackgroundSprite; // 使用缓存的资源
-            image.type = Image.Type.Sliced;
-            image.raycastTarget = false; // 关键：禁用射线检测
-            image.fillCenter = true;
+            if (keyBackgroundSprite != null)
+            {
+                image.sprite = keyBackgroundSprite;
+                image.type = Image.Type.Sliced;
+            }
+            image.raycastTarget = false;
             key.background = image;
             // Outline
             gameObject = new GameObject("Outline");
@@ -1532,10 +1542,12 @@ namespace JipperKeyViewer.KeyViewer
             transform.localScale = new Vector3(0.5f, 0.5f);
             image = gameObject.AddComponent<Image>();
             image.color = settings.Outline;
-            image.sprite = keyOutlineSprite; // 使用缓存的资源
-            image.type = Image.Type.Sliced;
-            image.raycastTarget = false; // 关键：禁用射线检测
-            image.fillCenter = true;
+            if (keyOutlineSprite != null)
+            {
+                image.sprite = keyOutlineSprite;
+                image.type = Image.Type.Sliced;
+            }
+            image.raycastTarget = false;
             key.outline = image;
             // KeyText
             gameObject = new GameObject("KeyText");
@@ -1709,7 +1721,7 @@ namespace JipperKeyViewer.KeyViewer
             defaultFont = arialFont;
 
             string modPath = Path.GetDirectoryName(Main.Mod?.Path);
-            string bundlePath = Path.Combine(modPath ?? ".", "keyviewer_resources");
+            string bundlePath = Path.Combine(modPath ?? ".", "assets", "keyviewer_resources");
 
             var bundle = AssetBundle.LoadFromFile(bundlePath);
             if (bundle == null)

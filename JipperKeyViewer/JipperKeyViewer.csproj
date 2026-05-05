@@ -91,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="lang.json">
+      <Link>lang\lang.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
