@@ -14,7 +14,7 @@ A key overlay mod for **A Dance of Fire and Ice**, built with UnityModManager.
 
 ## Installation
 
-1. Copy `JipperKeyViewer.dll` and `keyviewer_resources` to `A Dance of Fire and Ice_Data/Managed/UnityModManager/`
+1. Copy `JipperKeyViewer.dll` and `keyviewer_resources` to `A Dance of Fire and Ice_Data/Mod/`
 2. Copy `lang.json` to the same directory (optional, for custom translations)
 3. Enable the mod in UnityModManager
 
