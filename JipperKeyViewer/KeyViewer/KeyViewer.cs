@@ -49,7 +49,6 @@ namespace JipperKeyViewer.KeyViewer
         Key Total;
         Queue<long> PressTimes;
         Stopwatch Stopwatch;
-        bool Save;
         long lastFrameMs;
         const long MAX_DELTA_MS = 50;
         bool KeyChangeExpanded;
@@ -65,10 +64,15 @@ namespace JipperKeyViewer.KeyViewer
         {
             get
             {
-                string modPath = Path.GetDirectoryName(Main.Mod?.Path);
-                return Path.Combine(modPath ?? Application.persistentDataPath, "config", "settings.json");
+                if (configPath == null)
+                {
+                    string modPath = Path.GetDirectoryName(Main.Mod?.Path);
+                    configPath = Path.Combine(modPath ?? Application.persistentDataPath, "config", "settings.json");
+                }
+                return configPath;
             }
         }
+        static string configPath;
         // 缓存加载的资源
         Sprite keyBackgroundSprite;
         Sprite keyOutlineSprite;
@@ -85,6 +89,9 @@ namespace JipperKeyViewer.KeyViewer
         static readonly List<FontEntry> fontList = new List<FontEntry>();
         bool fontListExpanded;
         private bool wasEnabled;
+        private bool gameFontsScanned;
+        private readonly float[] rowSpeeds = new float[3];
+        private readonly float[] rowHeights = new float[3];
 
         void Awake()
         {
@@ -105,14 +112,19 @@ namespace JipperKeyViewer.KeyViewer
         void TryRestoreFont()
         {
             if (string.IsNullOrEmpty(Settings.FontName)) return;
-            if (fontList.Exists(e => e.name == Settings.FontName)) return; // 已恢复
+            string fontName = Settings.FontName;
+            for (int i = 0; i < fontList.Count; i++)
+                if (fontList[i].name == fontName) return; // 已恢复
             ScanGameFonts();
-            int idx = fontList.FindIndex(e => e.name == Settings.FontName);
-            if (idx >= 0)
+            for (int i = 0; i < fontList.Count; i++)
             {
-                Settings.FontIndex = idx;
-                UpdateAllFonts();
-                Debug.Log($"KeyViewer: 已恢复字体 {Settings.FontName}");
+                if (fontList[i].name == fontName)
+                {
+                    Settings.FontIndex = i;
+                    UpdateAllFonts();
+                    Debug.Log($"KeyViewer: 已恢复字体 {fontName}");
+                    return;
+                }
             }
         }
         void OnEnable()
@@ -130,6 +142,7 @@ namespace JipperKeyViewer.KeyViewer
         void OnDisable()
         {
             DisableKeyViewer();
+            SaveSettings();
         }
         void OnDestroy()
         {
@@ -139,9 +152,9 @@ namespace JipperKeyViewer.KeyViewer
         }
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // 在场景加载后第一时间清空所有雨线
+            SaveSettings();
             ClearAllRainDrops();
-            Debug.Log($"Scene changed to {scene.name}, cleared all rain drops");
+            Debug.Log($"Scene changed to {scene.name}, saved counts, cleared rain drops");
         }
         void Update()
         {
@@ -160,11 +173,12 @@ namespace JipperKeyViewer.KeyViewer
             }
             if (KeyViewerObject != null && Settings.Enabled) // 确保KeyViewer已启用
             {
+                long now = Stopwatch.ElapsedMilliseconds;
                 ProcessKeySelection();
                 // 在主线程中处理按键状态、计数、KPS、保存设置
-                ProcessMainAndFootKeysInUpdate();
+                ProcessMainAndFootKeysInUpdate(now);
                 ProcessKeyRainQueues();
-                ProcessKpsAndSaveInUpdate();
+                ProcessKpsInUpdate(now);
 
                 if (Settings.EnableRainEffect)
                 {
@@ -190,28 +204,33 @@ namespace JipperKeyViewer.KeyViewer
             float deltaMs = lastFrameMs == 0 ? 0 : Mathf.Min(MAX_DELTA_MS, now - lastFrameMs);
             lastFrameMs = now;
 
+            // Update pre-allocated row parameter arrays (no GC allocation)
+            rowSpeeds[0] = Settings.RainSpeedRow1;
+            rowSpeeds[1] = Settings.RainSpeedRow2;
+            rowSpeeds[2] = Settings.RainSpeedRow3;
+            rowHeights[0] = Settings.RainHeightRow1;
+            rowHeights[1] = Settings.RainHeightRow2;
+            rowHeights[2] = Settings.RainHeightRow3;
+
             for (int i = 0; i < Keys.Length; i++)
             {
                 Key key = Keys[i];
                 if (key == null || key.rainList.Count == 0) continue;
 
-                bool isKeyPressed = key.isPressed;
-                // 每键只查一次行参数，避免雨滴内循环重复 if 链
-                float rainSpeed = GetRainSpeedForKey(i);
-                float rainHeight = GetRainTravelDistanceForKey(i);
+                int row = i < 8 ? 0 : (i < 16 ? 1 : 2);
 
-                for (int j = 0; j < key.rainList.Count; j++)
+                // Reverse iteration avoids O(n²) from repeated RemoveAt
+                for (int j = key.rainList.Count - 1; j >= 0; j--)
                 {
                     RawRain rain = key.rainList[j];
                     if (rain.removed) continue;
 
-                    bool updateSize = isKeyPressed && j == key.rainList.Count - 1;
+                    bool updateSize = key.isPressed && j == key.rainList.Count - 1;
 
-                    if (!rain.UpdateLocation(deltaMs, updateSize, rainSpeed, rainHeight))
+                    if (!rain.UpdateLocation(deltaMs, updateSize, rowSpeeds[row], rowHeights[row]))
                     {
                         rain.removed = true;
                         key.rainList.RemoveAt(j);
-                        j--;
                     }
                 }
             }
@@ -236,29 +255,6 @@ namespace JipperKeyViewer.KeyViewer
         }
 
 
-
-        // 新增：获取雨滴速度
-        private float GetRainSpeedForKey(int keyIndex)
-        {
-            if (keyIndex < 8) return Settings.RainSpeedRow1;
-            if (keyIndex < 16) return Settings.RainSpeedRow2;
-            if (keyIndex < 20) return Settings.RainSpeedRow3;
-            return 0f;
-        }
-
-
-        private float GetRainTravelDistanceForKey(int keyIndex)
-        {
-            // 根据按键所在的行返回对应的雨滴高度
-            if (keyIndex < 8)
-                return Settings.RainHeightRow1; // 第1排
-            else if (keyIndex < 16)
-                return Settings.RainHeightRow2; // 第2排
-            else if (keyIndex < 20)
-                return Settings.RainHeightRow3; // 第3排
-            else
-                return 0f;
-        }
 
         private void ClearAllRainDrops()
         {
@@ -1292,15 +1288,17 @@ namespace JipperKeyViewer.KeyViewer
             KeyViewerObject = null;
             KeyViewerSizeObject = null;
             while (rainPool.Count > 0) Object.Destroy(rainPool.Pop().gameObject);
+            foreach (var mat in shadowMaterials.Values)
+                Object.Destroy(mat);
+            shadowMaterials.Clear();
             Canvas = null;
             Keys = null;
             PressTimes = null;
             Stopwatch = null;
         }
         // 在 Update 中直接处理主按键和脚键
-        private void ProcessMainAndFootKeysInUpdate()
+        private void ProcessMainAndFootKeysInUpdate(long elapsedMilliseconds)
         {
-            long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
             // Cache key code arrays — only refresh when layout changes
             if (cachedKeyStyle != Settings.KeyViewerStyle)
             {
@@ -1348,35 +1346,24 @@ namespace JipperKeyViewer.KeyViewer
                         if (Keys[idx].value != null)
                             Keys[idx].value.text = Settings.Count[idx].ToString();
                         PressTimes.Enqueue(elapsedMs);
-                        Save = true;
                         if (Settings.EnableRainEffect)
                             TriggerRainEffect(idx, Keys[idx]);
                     }
                 }
             }
         }
-        private void ProcessKpsAndSaveInUpdate()
+        private void ProcessKpsInUpdate(long elapsedMilliseconds)
         {
-            // 更新KPS
             if (PressTimes != null)
             {
-                long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
                 while (PressTimes.Count > 0 && elapsedMilliseconds - PressTimes.Peek() > 1000)
-                {
                     PressTimes.Dequeue();
-                }
                 int currentKps = PressTimes.Count;
                 if (lastKps != currentKps)
                 {
                     lastKps = currentKps;
                     if (Kps != null && Kps.value != null) Kps.value.text = currentKps.ToString();
                 }
-            }
-            // 保存设置 (检查Save标志)
-            if (Save && enabled) // 确保组件启用
-            {
-                SaveSettings();
-                Save = false; // 重置标志
             }
         }
         // UpdateKey 现在只负责更新颜色，安全地在主线程调用
@@ -1719,14 +1706,15 @@ namespace JipperKeyViewer.KeyViewer
 
         void ScanGameFonts()
         {
+            if (gameFontsScanned) return;
             var gameFonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
             if (gameFonts == null) return;
             foreach (var f in gameFonts)
             {
-                // 防止重复添加
                 if (!fontList.Exists(e => e.font == f))
                     fontList.Add(new FontEntry(f.name, f));
             }
+            gameFontsScanned = true;
             Debug.Log($"KeyViewer: 扫描到 {fontList.Count} 个字体");
         }
 
