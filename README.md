@@ -105,6 +105,6 @@ JipperKeyViewer/
 
 ---
 
-- 本项目主要使用 **MIT 许可证** – 详见 [LICENSE](./LICENSE) 文件。
+- 本项目主要使用 **MIT 许可证** – 详见 [LICENSE](./LICENSE.txt) 文件。
 
-- 但本项目中包含改编自 [JipperResourcePack](https://github.com/Jongye0l/JipperResourcePack)（作者 Jongyeol）的代码，该部分采用 **BSD 3-Clause 许可证**。BSD 许可部分的原始版权声明已保留，完整的 BSD 许可证文本请见 [LICENSE-BSD](./LICENSE-BSD) 文件。
+- 但本项目中包含改编自 [JipperResourcePack](https://github.com/Jongye0l/JipperResourcePack)（作者 Jongyeol）的代码，该部分采用 **BSD 3-Clause 许可证**。BSD 许可部分的原始版权声明已保留，完整的 BSD 许可证文本请见 [LICENSE-BSD](./LICENSE-BSD.txt) 文件。
