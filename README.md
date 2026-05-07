@@ -1,4 +1,7 @@
 # JipperKeyViewer
+![C#](https://img.shields.io/badge/Lang-Csharp-c9c8e4.svg?&logo=c#)
+![Visual Studio 2026](https://img.shields.io/badge/IDE-Visual%20Studio%202026-5C2D91?logo=visualstudio&logoColor=white)
+[![Downloads](https://img.shields.io/github/downloads/2228293026/JipperKeyViewer/total)](https://github.com/2228293026/JipperKeyViewer/releases/latest)
 
 A key overlay mod for **A Dance of Fire and Ice**, built with UnityModManager.
 
