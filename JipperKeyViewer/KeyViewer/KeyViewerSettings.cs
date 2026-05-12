@@ -107,6 +107,9 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Language code / 语言代码</summary>
         public string Language = "en";
 
+        /// <summary>Format large counts with thousands separator / 大数字千分位格式化</summary>
+        public bool EnableCountFormatting = false;
+
         /// <summary>
         /// Ensure all arrays are initialized (prevents null refs on load with legacy data) / 确保所有数组已初始化（防止加载旧数据时出现空引用）
         /// </summary>

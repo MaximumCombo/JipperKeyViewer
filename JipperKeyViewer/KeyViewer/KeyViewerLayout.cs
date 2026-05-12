@@ -116,7 +116,7 @@ namespace JipperKeyViewer.KeyViewer
             if (Total != null && Total.value != null && lastTotal != Settings.TotalCount)
             {
                 lastTotal = Settings.TotalCount;
-                Total.value.text = lastTotal.ToString();
+                Total.value.text = FormatCount(lastTotal);
             }
         }
 
@@ -156,7 +156,7 @@ namespace JipperKeyViewer.KeyViewer
                         Settings.Count[idx]++;
                         Settings.TotalCount++;
                         if (Keys[idx].value != null)
-                            Keys[idx].value.text = Settings.Count[idx].ToString();
+                            Keys[idx].value.text = FormatCount(Settings.Count[idx]);
                         PressTimes.Enqueue(elapsedMs);
                         // Trigger rain effect on key press / 按键按下时触发雨滴效果
                         if (Settings.EnableRainEffect)
@@ -485,7 +485,7 @@ namespace JipperKeyViewer.KeyViewer
             if (i == -2)
             {
                 key.text.text = "Total";
-                key.value.text = Settings.TotalCount.ToString();
+                key.value.text = FormatCount(Settings.TotalCount);
                 return;
             }
             if (i < 20)
@@ -496,7 +496,7 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     string displayText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
                     key.text.text = displayText;
-                    key.value.text = Settings.Count[i].ToString();
+                    key.value.text = FormatCount(Settings.Count[i]);
                 }
             }
             else
@@ -909,6 +909,12 @@ namespace JipperKeyViewer.KeyViewer
                 KeyviewerStyle.Key10 => BackSequence10,
                 _ => BackSequence16
             };
+        }
+
+        /// <summary>Format count with thousands separator if enabled / 千分位格式化数字</summary>
+        private static string FormatCount(int count)
+        {
+            return Settings.EnableCountFormatting ? count.ToString("N0") : count.ToString();
         }
     }
 }

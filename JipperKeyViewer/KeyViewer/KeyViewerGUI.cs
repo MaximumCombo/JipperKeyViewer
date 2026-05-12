@@ -63,6 +63,14 @@ namespace JipperKeyViewer.KeyViewer
                 SaveSettings();
             }
             GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            bool newFormatting = GUILayout.Toggle(Settings.EnableCountFormatting, I18n.Tr("count_formatting"));
+            if (newFormatting != Settings.EnableCountFormatting)
+            {
+                Settings.EnableCountFormatting = newFormatting;
+                SaveSettings();
+            }
+            GUILayout.EndHorizontal();
 
             // Font selection dropdown / 字体选择下拉菜单
             GUILayout.Label(I18n.Tr("font_style") + ":");
