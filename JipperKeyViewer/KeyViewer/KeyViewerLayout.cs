@@ -24,7 +24,7 @@ namespace JipperKeyViewer.KeyViewer
                 return;
             }
             // Create ScreenSpaceOverlay canvas (independent of game UI) / 创建 ScreenSpaceOverlay 画布（独立于游戏 UI）
-            KeyViewerObject = new GameObject("JipperResourcePack KeyViewer");
+            KeyViewerObject = new GameObject("Jipper KeyViewer");
             Canvas = KeyViewerObject.AddComponent<Canvas>();
             Canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             CanvasScaler scaler = Canvas.gameObject.AddComponent<CanvasScaler>();
@@ -485,7 +485,7 @@ namespace JipperKeyViewer.KeyViewer
             if (i == -2)
             {
                 key.text.text = "Total";
-                key.value.text = 0f.ToString();
+                key.value.text = Settings.TotalCount.ToString();
                 return;
             }
             if (i < 20)

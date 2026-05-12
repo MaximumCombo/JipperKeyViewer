@@ -67,6 +67,7 @@ namespace JipperKeyViewer.KeyViewer
             ["language"] = "Language",
             ["no_fonts_found"] = "(No fonts available)",
             ["custom_font_tip"] = "Custom Fonts: Put .ttf/.otf files into the CustomFont folder, then restart the game.",
+            ["reset_counts"] = "Reset Counts",
         };
 
         /// <summary>Chinese translations dictionary / 中文字典</summary>
@@ -118,6 +119,7 @@ namespace JipperKeyViewer.KeyViewer
             ["language"] = "语言",
             ["no_fonts_found"] = "（无可用字体）",
             ["custom_font_tip"] = "使用自定义字体 将 .ttf/.otf 字体文件放入 CustomFont 文件夹，重启游戏生效。",
+            ["reset_counts"] = "重置计数",
         };
 
         /// <summary>Path to the lang.json override file / lang.json 覆盖文件路径</summary>

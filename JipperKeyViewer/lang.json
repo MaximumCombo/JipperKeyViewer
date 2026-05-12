@@ -46,6 +46,7 @@
     { "key": "reset_default", "en": "Reset", "zh": "重置默认" },
     { "key": "language", "en": "Language", "zh": "语言" },
     { "key": "no_fonts_found", "en": "(No fonts available)", "zh": "（无可用字体）" },
-    { "key": "custom_font_tip", "en": "Custom Fonts: Put .ttf/.otf files into the CustomFont folder, then restart the game.", "zh": "使用自定义字体 将 .ttf/.otf 字体文件放入 CustomFont 文件夹，重启游戏生效。" }
+    { "key": "custom_font_tip", "en": "Custom Fonts: Put .ttf/.otf files into the CustomFont folder, then restart the game.", "zh": "使用自定义字体 将 .ttf/.otf 字体文件放入 CustomFont 文件夹，重启游戏生效。" },
+    { "key": "reset_counts", "en": "Reset Counts", "zh": "重置计数" }
   ]
 }

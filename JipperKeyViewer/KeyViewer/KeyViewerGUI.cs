@@ -39,6 +39,31 @@ namespace JipperKeyViewer.KeyViewer
                 SaveSettings();
             }
 
+            // Count reset / 计数重置
+            GUILayout.Space(5);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(I18n.Tr("reset_counts"), GUILayout.MinWidth(120)))
+            {
+                lastTotal = -1;
+                lastKps = -1;
+                Settings.TotalCount = 0;
+                for (int i = 0; i < Settings.Count.Length; i++)
+                    Settings.Count[i] = 0;
+                if (PressTimes != null) PressTimes.Clear();
+                if (Keys != null)
+                {
+                    for (int i = 0; i < Keys.Length; i++)
+                    {
+                        if (Keys[i] != null && Keys[i].value != null)
+                            Keys[i].value.text = "0";
+                    }
+                }
+                if (Kps != null && Kps.value != null) Kps.value.text = "0";
+                if (Total != null && Total.value != null) Total.value.text = "0";
+                SaveSettings();
+            }
+            GUILayout.EndHorizontal();
+
             // Font selection dropdown / 字体选择下拉菜单
             GUILayout.Label(I18n.Tr("font_style") + ":");
             string curFont = fontList.Count > 0 ? fontList[Settings.FontIndex].name : "None";
