@@ -91,6 +91,7 @@ namespace JipperKeyViewer.KeyViewer
             KeyViewerObject = null;
             KeyViewerSizeObject = null;
             while (rainPool.Count > 0) Object.Destroy(rainPool.Pop().gameObject);
+            activeRains.Clear();
             foreach (var mat in shadowMaterials.Values)
                 Object.Destroy(mat);
             shadowMaterials.Clear();
@@ -98,6 +99,7 @@ namespace JipperKeyViewer.KeyViewer
             Keys = null;
             PressTimes = null;
             Stopwatch = null;
+            lastFrameMs = 0;
         }
 
         private void ProcessMainAndFootKeysInUpdate(long elapsedMilliseconds)
@@ -748,6 +750,8 @@ namespace JipperKeyViewer.KeyViewer
                     Object.DestroyImmediate(Kps.gameObject);
                 }
             }
+            while (rainPool.Count > 0) Object.Destroy(rainPool.Pop().gameObject);
+            activeRains.Clear();
             switch (Settings.KeyViewerStyle)
             {
                 case KeyviewerStyle.Key12:
@@ -784,6 +788,8 @@ namespace JipperKeyViewer.KeyViewer
                     }
                 }
             }
+            while (rainPool.Count > 0) Object.Destroy(rainPool.Pop().gameObject);
+            activeRains.Clear();
             switch (Settings.FootKeyViewerStyle)
             {
                 case FootKeyviewerStyle.Key2:

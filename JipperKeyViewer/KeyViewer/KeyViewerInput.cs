@@ -1,53 +1,20 @@
-using System.Runtime.InteropServices;
-using System.Security;
 using UnityEngine;
 
 namespace JipperKeyViewer.KeyViewer
 {
     public partial class KeyViewer : MonoBehaviour
     {
-        private void StartKeySelection()
-        {
-            WinAPICool = 0;
-            KeyPressed = new bool[256];
-            for (int i = 0; i < 256; i++)
-            {
-                KeyPressed[i] = (GetAsyncKeyState(i) & 0x8000) != 0;
-            }
-        }
-
         private void ProcessKeySelection()
         {
             if (SelectedKey == -1 || TextChanged || !Application.isFocused) return;
-            if (Input.anyKeyDown)
+            if (!Input.anyKeyDown) return;
+
+            foreach (KeyCode keyCode in AllKeyCodes)
             {
-                foreach (KeyCode keyCode in AllKeyCodes)
+                if (Input.GetKeyDown(keyCode))
                 {
-                    if (Input.GetKeyDown(keyCode))
-                    {
-                        SetupKey(keyCode);
-                        return;
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < 256; i++)
-                {
-                    bool currentPressed = (GetAsyncKeyState(i) & 0x8000) != 0;
-                    if (currentPressed == KeyPressed[i]) continue;
-                    if (KeyPressed[i])
-                    {
-                        KeyPressed[i] = false;
-                        WinAPICool = 0;
-                        continue;
-                    }
-                    else if (WinAPICool++ >= 6)
-                    {
-                        KeyCode keyCode = (KeyCode)(i + 0x1000);
-                        SetupKey(keyCode);
-                        return;
-                    }
+                    SetupKey(keyCode);
+                    return;
                 }
             }
         }
@@ -72,13 +39,8 @@ namespace JipperKeyViewer.KeyViewer
                 Keys[SelectedKey].text.text = displayText;
             }
             SelectedKey = -1;
-            WinAPICool = 0;
-            KeyPressed = null;
             SaveSettings();
         }
-
-        [DllImport("user32.dll"), SuppressUnmanagedCodeSecurity]
-        private static extern short GetAsyncKeyState(int vKey);
 
         public static string KeyToString(KeyCode keyCode)
         {

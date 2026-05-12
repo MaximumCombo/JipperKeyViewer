@@ -12,16 +12,16 @@ namespace JipperKeyViewer.KeyViewer
         public Vector2? anchoredPosition;
         public bool removed;
 
-        public bool UpdateLocation(float deltaMs, bool updateSize, float speed, float height)
+        public bool UpdateLocation(float deltaMs, bool updateSize, float speedFactor, float height)
         {
             localTime += deltaMs;
-            float y = localTime / 300f * speed;
-            if (updateSize) FinalSize = new Vector2(color switch
+            float y = localTime * speedFactor;
+            if (updateSize || FinalSize == default) FinalSize = new Vector2(color switch
             {
                 0 => 50,
                 3 => 30,
                 _ => 40
-            }, localTime / 300f * speed);
+            }, localTime * speedFactor);
             if (y > height)
             {
                 float sizeY = FinalSize.y - y + height;

@@ -6,26 +6,21 @@ namespace JipperKeyViewer.KeyViewer
 {
     public partial class KeyViewer : MonoBehaviour
     {
+        const int MAX_POOL_SIZE = 30;
         private void UpdateRainEffects()
         {
             if (!Settings.EnableRainEffect) return;
-
-            if (Stopwatch == null)
-            {
-                Stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                lastFrameMs = 0;
-                return;
-            }
             if (Keys == null || Keys.Length == 0) return;
 
             long now = Stopwatch.ElapsedMilliseconds;
-            float deltaMs = lastFrameMs == 0 ? 0 : Mathf.Min(MAX_DELTA_MS, now - lastFrameMs);
+            if (lastFrameMs == 0) lastFrameMs = now - 16;
+            float deltaMs = Mathf.Min(MAX_DELTA_MS, now - lastFrameMs);
             lastFrameMs = now;
 
-            // Update pre-allocated row parameter arrays (no GC allocation)
-            rowSpeeds[0] = Settings.RainSpeedRow1;
-            rowSpeeds[1] = Settings.RainSpeedRow2;
-            rowSpeeds[2] = Settings.RainSpeedRow3;
+            // Pre-compute speed factors (speed / 300f) so each RawRain avoids division
+            rowSpeeds[0] = Settings.RainSpeedRow1 / 300f;
+            rowSpeeds[1] = Settings.RainSpeedRow2 / 300f;
+            rowSpeeds[2] = Settings.RainSpeedRow3 / 300f;
             rowHeights[0] = Settings.RainHeightRow1;
             rowHeights[1] = Settings.RainHeightRow2;
             rowHeights[2] = Settings.RainHeightRow3;
@@ -124,7 +119,7 @@ namespace JipperKeyViewer.KeyViewer
                 GameObject go = new GameObject("Rain");
                 go.AddComponent<RectTransform>();
                 r = go.AddComponent<Rain>();
-                r.Init(parent);
+            r.Init(parent);
             }
             return r;
         }
@@ -134,7 +129,10 @@ namespace JipperKeyViewer.KeyViewer
             r.gameObject.SetActive(false);
             r.rawRain = null;
             r.transform.SetParent(null);
-            rainPool.Push(r);
+            if (rainPool.Count < MAX_POOL_SIZE)
+                rainPool.Push(r);
+            else
+                Object.Destroy(r.gameObject);
         }
     }
 }

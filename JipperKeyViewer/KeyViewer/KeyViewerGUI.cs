@@ -332,7 +332,6 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     SelectedKey = i;
                     TextChanged = false;
-                    StartKeySelection();
                 }
             }
             GUILayout.EndHorizontal();
@@ -345,7 +344,6 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     SelectedKey = backSequence[i];
                     TextChanged = false;
-                    StartKeySelection();
                 }
             }
             GUILayout.EndHorizontal();
@@ -361,7 +359,6 @@ namespace JipperKeyViewer.KeyViewer
                         {
                             SelectedKey = i;
                             TextChanged = false;
-                            StartKeySelection();
                         }
                     }
                 }
@@ -380,7 +377,6 @@ namespace JipperKeyViewer.KeyViewer
                         {
                             SelectedKey = i + 20;
                             TextChanged = false;
-                            StartKeySelection();
                         }
                     }
                     GUILayout.EndHorizontal();
@@ -394,7 +390,6 @@ namespace JipperKeyViewer.KeyViewer
                         {
                             SelectedKey = i + 20;
                             TextChanged = false;
-                            StartKeySelection();
                         }
                     }
                     GUILayout.EndHorizontal();
@@ -408,7 +403,6 @@ namespace JipperKeyViewer.KeyViewer
                         {
                             SelectedKey = i + 20;
                             TextChanged = false;
-                            StartKeySelection();
                         }
                     }
                     for (int s = 0; s < 8 - remaining; s++)

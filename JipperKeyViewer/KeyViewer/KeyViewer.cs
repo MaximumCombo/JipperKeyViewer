@@ -32,7 +32,8 @@ namespace JipperKeyViewer.KeyViewer
 
         static KeyViewer()
         {
-            AllKeyCodes = (KeyCode[])Enum.GetValues(typeof(KeyCode));
+            var all = (KeyCode[])Enum.GetValues(typeof(KeyCode));
+            AllKeyCodes = Array.FindAll(all, k => !k.ToString().StartsWith("Joystick"));
         }
 
         // --- Instance fields ---
@@ -52,9 +53,7 @@ namespace JipperKeyViewer.KeyViewer
         bool TextChangeExpanded;
         bool[] ColorExpanded;
         KeyviewerStyle currentKeyViewerStyle;
-        bool[] KeyPressed;
         int SelectedKey = -1;
-        int WinAPICool;
         bool TextChanged;
 
         static string ConfigPath
@@ -76,6 +75,8 @@ namespace JipperKeyViewer.KeyViewer
         TMP_FontAsset defaultFont;
         public static KeyViewer instance;
         private Stack<Rain> rainPool = new Stack<Rain>();
+        private readonly List<Rain> activeRains = new List<Rain>();
+        static Dictionary<string, int> fontNameIndex;
         private static readonly KeyCode[] AllKeyCodes;
         private KeyviewerStyle cachedKeyStyle = (KeyviewerStyle)(-1);
         private KeyCode[] cachedMainKeys;
@@ -103,49 +104,16 @@ namespace JipperKeyViewer.KeyViewer
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
-        void TryRestoreFont()
+        void RestoreFontOnce()
         {
-            if (fontRestored || string.IsNullOrEmpty(Settings.FontName)) return;
-            string fontName = Settings.FontName;
-            for (int i = 0; i < fontList.Count; i++)
+            if (fontNameIndex == null || fontRestored || string.IsNullOrEmpty(Settings.FontName)) return;
+            if (fontNameIndex.TryGetValue(Settings.FontName, out int idx))
             {
-                if (fontList[i].name == fontName)
-                {
-                    Settings.FontIndex = i;
-                    UpdateAllFonts();
-                    SaveSettings();
-                    fontRestored = true;
-                    //Main.Mod.Logger.Log($"KeyViewer: \u5DF2\u6062\u590D\u5B57\u4F53 {fontName}");
-                    return;
-                }
+                Settings.FontIndex = idx;
+                UpdateAllFonts();
+                SaveSettings();
             }
-            ScanGameFonts();
-            for (int i = 0; i < fontList.Count; i++)
-            {
-                if (fontList[i].name == fontName)
-                {
-                    Settings.FontIndex = i;
-                    UpdateAllFonts();
-                    SaveSettings();
-                    fontRestored = true;
-                    //Main.Mod.Logger.Log($"KeyViewer: \u5DF2\u6062\u590D\u5B57\u4F53 {fontName}");
-                    return;
-                }
-            }
-            ScanCustomFonts();
-            for (int i = 0; i < fontList.Count; i++)
-            {
-                if (fontList[i].name == fontName)
-                {
-                    Settings.FontIndex = i;
-                    UpdateAllFonts();
-                    SaveSettings();
-                    fontRestored = true;
-                    //Main.Mod.Logger.Log($"KeyViewer: \u5DF2\u6062\u590D\u5B57\u4F53 {fontName}");
-                    return;
-                }
-            }
-            fontRestored = true; // font not found, stop trying each frame
+            fontRestored = true;
         }
 
         void OnEnable()
@@ -175,15 +143,22 @@ namespace JipperKeyViewer.KeyViewer
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             SaveSettings();
+            fontList.RemoveAll(e => e.font == null);
+            if (Settings.FontIndex >= fontList.Count)
+                Settings.FontIndex = 0;
             fontRestored = false;
             LinkFallbackFonts();
             ClearAllRainDrops();
             //Main.Mod.Logger.Log($"Scene changed to {scene.name}, saved counts, cleared rain drops");
         }
 
+        void Start()
+        {
+            RestoreFontOnce();
+        }
+
         void Update()
         {
-            TryRestoreFont();
             if (wasEnabled != Settings.Enabled)
             {
                 if (Settings.Enabled)

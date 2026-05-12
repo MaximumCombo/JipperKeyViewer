@@ -22,7 +22,7 @@ namespace JipperKeyViewer.KeyViewer
                 if (fontList.Exists(e => e.font != null && e.font.name == font.name))
                     continue;
 
-                // ´«Í³ Font ¡ú TMP_FontAsset
+                // ä¼ ç»Ÿ Font â†’ TMP_FontAsset
                 var tmpFont = TMP_FontAsset.CreateFontAsset(font);
                 if (tmpFont != null)
                 {
@@ -106,6 +106,10 @@ namespace JipperKeyViewer.KeyViewer
 
             if (Settings.FontIndex >= fontList.Count)
                 Settings.FontIndex = 0;
+
+            fontNameIndex = new Dictionary<string, int>(fontList.Count);
+            for (int i = 0; i < fontList.Count; i++)
+                fontNameIndex[fontList[i].name] = i;
 
             return bundle != null;
         }
