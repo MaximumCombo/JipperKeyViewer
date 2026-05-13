@@ -65,9 +65,12 @@ namespace JipperKeyViewer.KeyViewer
                 transform.anchoredPosition = rawRain.anchoredPosition.Value;
                 rawRain.anchoredPosition = null;
             }
-            var c = image.color;
-            c.a = rawRain.alpha;
-            image.color = c;
+            if (KeyViewer.Settings.EnableRainFade)
+            {
+                var c = image.color;
+                c.a = rawRain.alpha;
+                image.color = c;
+            }
         }
     }
 }

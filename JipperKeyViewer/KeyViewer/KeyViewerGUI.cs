@@ -362,6 +362,15 @@ namespace JipperKeyViewer.KeyViewer
                         Settings.RainSpeedRow3 = Mathf.Clamp(newSpeed3, 50f, 1000f);
                     GUILayout.EndHorizontal();
                 }
+
+                // Rain fade-out toggle / 雨滴松开淡出开关
+                GUILayout.Space(5);
+                bool newRainFade = GUILayout.Toggle(Settings.EnableRainFade, I18n.Tr("rain_fade"));
+                if (newRainFade != Settings.EnableRainFade)
+                {
+                    Settings.EnableRainFade = newRainFade;
+                    SaveSettings();
+                }
             }
 
             GUILayout.Space(10);

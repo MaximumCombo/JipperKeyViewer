@@ -37,6 +37,7 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_row3"] = "Row 3",
             ["rain_height"] = "Rain Height",
             ["rain_speed"] = "Rain Speed",
+            ["rain_fade"] = "Rain Fade-out",
 
             ["key_change"] = "Key Change",
             ["text_change"] = "Text Change",
@@ -91,6 +92,7 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_row3"] = "第3排",
             ["rain_height"] = "雨滴高度",
             ["rain_speed"] = "雨线速度",
+            ["rain_fade"] = "雨滴松开淡出",
 
             ["key_change"] = "按键更改",
             ["text_change"] = "文本更改",
@@ -145,6 +147,7 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_row3"] = "3열",
             ["rain_height"] = "빗줄 높이",
             ["rain_speed"] = "빗줄 속도",
+            ["rain_fade"] = "빗줄 페이드아웃",
 
             ["key_change"] = "키 변경",
             ["text_change"] = "텍스트 변경",
