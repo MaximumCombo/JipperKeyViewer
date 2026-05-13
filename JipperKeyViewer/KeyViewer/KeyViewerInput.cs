@@ -41,9 +41,14 @@ namespace JipperKeyViewer.KeyViewer
             {
                 keyCodes[SelectedKey] = keyCode;
             }
-            else
+            else if (footKeyCodes != null && SelectedKey - 20 < footKeyCodes.Length)
             {
                 footKeyCodes[SelectedKey - 20] = keyCode;
+            }
+            else
+            {
+                SelectedKey = -1;
+                return;
             }
             if (Keys != null && SelectedKey < Keys.Length && Keys[SelectedKey] != null)
             {

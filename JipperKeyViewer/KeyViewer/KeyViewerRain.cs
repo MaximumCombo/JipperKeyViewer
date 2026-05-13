@@ -132,6 +132,11 @@ namespace JipperKeyViewer.KeyViewer
             foreach (var key in Keys)
             {
                 if (key == null) continue;
+                while (key.rawRainQueue.Count > 0)
+                {
+                    var rawRain = key.rawRainQueue.Dequeue();
+                    ReturnRawRain(rawRain);
+                }
                 foreach (var rain in key.rainList)
                 {
                     rain.removed = true;

@@ -305,6 +305,12 @@ namespace JipperKeyViewer.KeyViewer
                         Settings.key20Text = Settings.key20Text ?? new string[20];
                         Settings.Count = Settings.Count ?? new int[36];
                     }
+                    else
+                    {
+                        Main.Mod.Logger.Error("Failed to parse settings file (empty or corrupt), creating new settings");
+                        Settings = new KeyViewerSettings();
+                        SaveSettings();
+                    }
                 }
                 catch (Exception e)
                 {

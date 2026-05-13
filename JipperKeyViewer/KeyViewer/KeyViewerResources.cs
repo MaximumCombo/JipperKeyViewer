@@ -132,6 +132,7 @@ namespace JipperKeyViewer.KeyViewer
         private void UpdateAllFonts()
         {
             TMP_FontAsset currentFont = GetCurrentFont();
+            if (currentFont == null) return;
             Material shadowMat = GetShadowMaterial(currentFont);
             void UpdateText(TMP_Text t)
             {

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace JipperKeyViewer.KeyViewer
@@ -190,6 +189,21 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
 
+        [Serializable]
+        private class LangEntry
+        {
+            public string key;
+            public string en;
+            public string zh;
+            public string ko;
+        }
+
+        [Serializable]
+        private class LangFile
+        {
+            public LangEntry[] entries;
+        }
+
         /// <summary>
         /// Load translations from lang.json if present, merging into the built-in dictionaries / 从 lang.json 加载翻译（如果存在），合并到内置字典中
         /// </summary>
@@ -205,22 +219,22 @@ namespace JipperKeyViewer.KeyViewer
             try
             {
                 string json = File.ReadAllText(path);
-                var matches = Regex.Matches(json, "\"key\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"en\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"zh\"\\s*:\\s*\"([^\"]+)\"");
-                foreach (Match m in matches)
+                var langFile = JsonUtility.FromJson<LangFile>(json);
+                if (langFile?.entries == null)
                 {
-                    if (m.Groups.Count == 4)
-                    {
-                        string k = m.Groups[1].Value;
-                        string e = m.Groups[2].Value;
-                        string z = m.Groups[3].Value;
-                        if (!string.IsNullOrEmpty(k))
-                        {
-                            en[k] = e;
-                            zh[k] = z;
-                        }
-                    }
+                    Debug.LogError("I18n: lang.json has no entries array");
+                    return;
                 }
-                Debug.Log($"I18n: loaded {matches.Count} entries from lang.json");
+                int count = 0;
+                foreach (var entry in langFile.entries)
+                {
+                    if (string.IsNullOrEmpty(entry.key)) continue;
+                    if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
+                    if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
+                    if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
+                    count++;
+                }
+                Debug.Log($"I18n: loaded {count} entries from lang.json");
             }
             catch (Exception e)
             {

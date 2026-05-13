@@ -390,10 +390,11 @@ namespace JipperKeyViewer.KeyViewer
             }
             transform.localScale = Vector3.one;
             text = gameObject.AddComponent<TextMeshProUGUI>();
-            text.font = GetCurrentFont();
-            if (text.font != null)
+            var keyFont = GetCurrentFont();
+            if (keyFont != null)
             {
-                var mat = GetShadowMaterial(text.font);
+                text.font = keyFont;
+                var mat = GetShadowMaterial(keyFont);
                 if (mat != null) text.fontMaterial = mat;
             }
             text.enableAutoSizing = true;
@@ -423,10 +424,11 @@ namespace JipperKeyViewer.KeyViewer
                 }
                 transform.localScale = Vector3.one;
                 text = gameObject.AddComponent<TextMeshProUGUI>();
-                text.font = GetCurrentFont();
-                if (text.font != null)
+                var countFont = GetCurrentFont();
+                if (countFont != null)
                 {
-                    var mat = GetShadowMaterial(text.font);
+                    text.font = countFont;
+                    var mat = GetShadowMaterial(countFont);
                     if (mat != null) text.fontMaterial = mat;
                 }
                 text.enableAutoSizing = true;
