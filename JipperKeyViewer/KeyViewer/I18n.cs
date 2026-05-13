@@ -195,16 +195,16 @@ namespace JipperKeyViewer.KeyViewer
         [Serializable]
         private class LangEntry
         {
-            public string key;
-            public string en;
-            public string zh;
-            public string ko;
+            public string key = null;
+            public string en = null;
+            public string zh = null;
+            public string ko = null;
         }
 
         [Serializable]
         private class LangFile
         {
-            public LangEntry[] entries;
+            public LangEntry[] entries = null;
         }
 
         /// <summary>
