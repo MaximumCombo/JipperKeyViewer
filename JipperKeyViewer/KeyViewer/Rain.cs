@@ -24,6 +24,7 @@ namespace JipperKeyViewer.KeyViewer
         {
             transform = GetComponent<RectTransform>();
             image = gameObject.AddComponent<Image>();
+            image.raycastTarget = false;
         }
 
         /// <summary>
