@@ -13,7 +13,7 @@ public static class BuildAssetBundles
         const string bundleName = "keyviewer_resources_6000";
         SetBundleName(bundleName);
         BuildPipeline.BuildAssetBundles(outputDir,
-            BuildAssetBundleOptions.None,
+            BuildAssetBundleOptions.AssetBundleStripUnityVersion | BuildAssetBundleOptions.None,
             BuildTarget.StandaloneWindows64);
         SetBundleName("keyviewer_resources"); // restore
 

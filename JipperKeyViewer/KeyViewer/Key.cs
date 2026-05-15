@@ -57,7 +57,7 @@ namespace JipperKeyViewer.KeyViewer
         private void OnDestroy()
         {
             while (rawRainQueue.Count > 0)
-                rawRainQueue.Dequeue();
+                rainSystem?.ReturnRawRain(rawRainQueue.Dequeue());
             foreach (RawRain rawRain in rainList)
             {
                 rawRain.removed = true;

@@ -200,6 +200,9 @@ namespace JipperKeyViewer.KeyViewer
             SaveSettings();
             SceneManager.sceneLoaded -= OnSceneLoaded;
             rainSystem?.ClearAll(Keys);
+            foreach (var mat in shadowMaterials.Values)
+                Destroy(mat);
+            shadowMaterials.Clear();
         }
 
         /// <summary>
