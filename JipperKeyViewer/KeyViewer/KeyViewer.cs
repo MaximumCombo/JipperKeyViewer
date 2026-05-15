@@ -105,8 +105,6 @@ namespace JipperKeyViewer.KeyViewer
         Sprite keyBackgroundSprite;
         /// <summary>Cached outline sprite from AssetBundle / 从 AssetBundle 缓存的轮廓精灵</summary>
         Sprite keyOutlineSprite;
-        /// <summary>Current default font / 当前默认字体</summary>
-        TMP_FontAsset defaultFont;
         /// <summary>Singleton instance reference / 单例实例引用</summary>
         public static KeyViewer instance;
         /// <summary>Rain effect system (object-pooled, zero-GC on hot path) / 雨滴效果系统</summary>

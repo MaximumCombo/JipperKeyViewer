@@ -308,8 +308,6 @@ namespace JipperKeyViewer.KeyViewer
         /// <param name="count">Show press count text / 显示按下计数文本</param>
         private Key CreateKey(int i, float x, float y, float sizeX, int raining, bool slim = false, bool count = true)
         {
-            if (defaultFont == null)
-                defaultFont = GetCurrentFont();
             GameObject obj = new("Key " + i);
             KeyViewerSettings settings = Settings;
             RectTransform transform = obj.AddComponent<RectTransform>();
@@ -680,18 +678,17 @@ namespace JipperKeyViewer.KeyViewer
 
         private void SetKeyPosition(int keyIndex, float x, float y)
         {
-            float cx = x;
             if (keyIndex == -1 && Kps != null)
             {
-                ((RectTransform)Kps.transform).anchoredPosition = new Vector2(cx, y);
+                ((RectTransform)Kps.transform).anchoredPosition = new Vector2(x, y);
             }
             else if (keyIndex == -2 && Total != null)
             {
-                ((RectTransform)Total.transform).anchoredPosition = new Vector2(cx, y);
+                ((RectTransform)Total.transform).anchoredPosition = new Vector2(x, y);
             }
             else if (keyIndex >= 0 && keyIndex < Keys.Length && Keys[keyIndex] != null)
             {
-                ((RectTransform)Keys[keyIndex].transform).anchoredPosition = new Vector2(cx, y);
+                ((RectTransform)Keys[keyIndex].transform).anchoredPosition = new Vector2(x, y);
             }
         }
 

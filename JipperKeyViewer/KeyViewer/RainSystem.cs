@@ -11,6 +11,7 @@ namespace JipperKeyViewer.KeyViewer
         private readonly Stack<Rain> rainPool = new Stack<Rain>();
         private readonly Stack<RawRain> rawRainPool = new Stack<RawRain>();
         private readonly List<int> rainActiveKeys = new List<int>();
+        private int pendingRainQueueCount;
 
         private const int MAX_RAWRAIN_POOL_SIZE = 60;
         private const int MAX_POOL_SIZE = 30;
@@ -27,7 +28,8 @@ namespace JipperKeyViewer.KeyViewer
 
         public void ProcessKeyQueues(Key[] keys)
         {
-            if (keys == null) return;
+            if (keys == null || pendingRainQueueCount == 0) return;
+            pendingRainQueueCount = 0;
             for (int i = 0; i < keys.Length; i++)
             {
                 Key key = keys[i];
@@ -229,6 +231,7 @@ namespace JipperKeyViewer.KeyViewer
             RawRain rawRain = GetRawRain(key.rain.transform, key.color);
             key.rawRainQueue.Enqueue(rawRain);
             key.rainList.Add(rawRain);
+            pendingRainQueueCount++;
             if (key.rainList.Count == 1)
                 rainActiveKeys.Add(keyIndex);
         }
