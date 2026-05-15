@@ -58,7 +58,7 @@ namespace JipperKeyViewer.KeyViewer
             }
 
             bool enableFade = settings.EnableRainFade;
-            double now = Time.unscaledTimeAsDouble;
+            float dt = Time.unscaledDeltaTime * 1000f;
 
             for (int i = 0; i < rainActiveKeys.Count; i++)
             {
@@ -77,7 +77,7 @@ namespace JipperKeyViewer.KeyViewer
                     bool updateSize = key.isPressed && j == key.rainList.Count - 1;
 
                     float oldAlpha = rain.alpha;
-                    if (!rain.UpdateLocation(updateSize, rowSpeeds[row], rowHeights[row], enableFade, now))
+                    if (!rain.UpdateLocation(updateSize, rowSpeeds[row], rowHeights[row], enableFade, dt))
                     {
                         rain.removed = true;
                         key.rainList.RemoveAt(j);
@@ -195,10 +195,10 @@ namespace JipperKeyViewer.KeyViewer
                 r = rawRainPool.Pop();
                 r.transform = transform;
                 r.color = color;
-                r.startTime = Time.unscaledTimeAsDouble;
                 r.removed = false;
                 r.alpha = 1f;
-                r.fadeTimer = -1f;
+                r.fadeElapsed = -1f;
+                r.elapsedMs = 0f;
                 r.sizeDelta = null;
                 r.anchoredPosition = null;
                 r.rainComponent = null;
