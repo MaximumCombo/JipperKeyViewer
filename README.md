@@ -73,9 +73,10 @@ JipperKeyViewer/
 │   ├── KeyViewerGUI.cs           # Settings window / 设置界面
 │   ├── KeyViewerInput.cs         # Key detection & rebinding / 按键检测 & 绑定
 │   ├── KeyViewerLayout.cs        # Layout init, positioning, core update loop / 布局 & 定位
-│   ├── KeyViewerRain.cs          # Rain effect & object pool / 雨滴效果 & 对象池
 │   ├── KeyViewerResources.cs     # AssetBundle & font management / 资源 & 字体
 │   ├── KeyViewerSettings.cs      # Settings data model & helpers / 设置模型 & 辅助类
+│   ├── RainSystem.cs             # Rain effect manager & object pool / 雨滴管理器 & 对象池
+│   ├── IRainSettings.cs          # Rain settings interface / 雨滴设置接口
 │   ├── Key.cs                    # Key MonoBehaviour with rain queue / 按键组件
 │   ├── Rain.cs                   # Rain drop rendering with object pool / 雨滴渲染
 │   ├── RawRain.cs                # Rain drop data & position calculation / 雨滴数据对象
@@ -93,9 +94,10 @@ JipperKeyViewer/
 - Zero Harmony patches — fully compatible with game updates / 零 Harmony 补丁，完全兼容游戏更新
 - Pure Canvas overlay, independent of game UI system / 纯 Canvas 覆盖层，独立于游戏 UI 系统
 - Normalized custom positioning (v1.2.2+): X/Y 0–1 adapts to any resolution and aspect ratio / 归一化坐标，自动适配任意分辨率和宽高比
-- Dynamic font scanning: supports any TMP font used in the game / 动态字体扫描：支持游戏内所有 TMP 字体
+- Dynamic font scanning: supports any TMP font used in the game, with deduplication by original font name / 动态字体扫描：按原始 Font 名去重，支持游戏内所有 TMP 字体
 - Fonts: [Maplestory OTF](https://fontmeme.com/fonts/maplestory-font/), [cjkFonts](https://www.zitijia.com/i/321518733317131321.html)
 - CustomFont folder path displayed in settings UI for easy access / 设置界面中显示 CustomFont 文件夹路径，方便查找
+- Delta-accumulated rain timer: smooth animation even during GPU spikes; drops complete their cycle naturally on pause, no permanent freeze / Delta 累加雨滴计时：GPU spike 后不跳帧，暂停时雨滴走完动画正常过期
 
 ## Acknowledgements / 鸣谢
 - The key layout and visual style references the implementation in [JipperResourcePack](https://github.com/Jongye0l/JipperResourcePack).
