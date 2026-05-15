@@ -31,13 +31,15 @@ namespace JipperKeyViewer.KeyViewer
             {
                 bool exists = false;
                 foreach (var e in fontList)
-                    if (e.font != null && e.font.name == font.name) { exists = true; break; }
+                    if (e.sourceFontName == font.name) { exists = true; break; }
                 if (exists) continue;
 
                 var tmpFont = TMP_FontAsset.CreateFontAsset(font);
                 if (tmpFont != null)
                 {
-                    fontList.Add(new FontEntry(font.name, tmpFont));
+                    var entry = new FontEntry(font.name, tmpFont);
+                    entry.sourceFontName = font.name;
+                    fontList.Add(entry);
                     added++;
                 }
             }
@@ -52,7 +54,7 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private bool TryLoadResources()
         {
-            if (keyBackgroundSprite != null) return true;
+            if (resourcesLoaded) return true;
 
             fontList.Clear();
             shadowMaterials.Clear();
@@ -60,11 +62,12 @@ namespace JipperKeyViewer.KeyViewer
             string modPath = Path.GetDirectoryName(Main.Mod?.Path) ?? ".";
             string assetsDir = Path.Combine(modPath, "assets");
 
-            // Load AssetBundle from the assets directory / 从 assets 目录加载 AssetBundle
-            // The bundle contains key sprites and bundled fonts (MapleStory, CJK) / 包中包含按键精灵和捆绑字体（MapleStory、CJK）
             string bundlePath = Path.Combine(assetsDir, "keyviewer_resources");
 
             var bundle = AssetBundle.LoadFromFile(bundlePath);
+
+            ScanGameFonts();
+
             if (bundle != null)
             {
                 keyBackgroundSprite = bundle.LoadAsset<Sprite>("KeyBackground");
@@ -74,7 +77,9 @@ namespace JipperKeyViewer.KeyViewer
                 if (mapleOTF != null)
                 {
                     mapleFont = TMP_FontAsset.CreateFontAsset(mapleOTF);
-                    fontList.Add(new FontEntry("MapleStory", mapleFont));
+                    var entry = new FontEntry("MapleStory", mapleFont);
+                    entry.sourceFontName = "MAPLESTORY_OTF_BOLD";
+                    fontList.Add(entry);
                 }
                 else
                 {
@@ -85,7 +90,9 @@ namespace JipperKeyViewer.KeyViewer
                 if (cjkOTF != null)
                 {
                     var cjkFont = TMP_FontAsset.CreateFontAsset(cjkOTF);
-                    fontList.Insert(0, new FontEntry("CJK (Default)", cjkFont));
+                    var entry = new FontEntry("CJK (Default)", cjkFont);
+                    entry.sourceFontName = "cjkFonts-regular-normalized";
+                    fontList.Insert(0, entry);
                 }
                 else
                 {
@@ -103,19 +110,17 @@ namespace JipperKeyViewer.KeyViewer
                 Main.Mod.Logger.Error($"KeyViewer: Cannot load AssetBundle at {bundlePath}");
             }
 
-            // Scan for additional fonts from game resources and custom fonts folder / 扫描游戏资源和自定义字体文件夹中的额外字体
-            ScanGameFonts();
             ScanCustomFonts();
             LinkFallbackFonts();
 
             if (Settings.FontIndex >= fontList.Count)
                 Settings.FontIndex = 0;
 
-            // Build font name → index mapping for persistence across scene loads / 构建字体名称到索引的映射以便跨场景持久化
             fontNameIndex = new Dictionary<string, int>(fontList.Count);
             for (int i = 0; i < fontList.Count; i++)
                 fontNameIndex[fontList[i].name] = i;
 
+            resourcesLoaded = true;
             return bundle != null;
         }
 

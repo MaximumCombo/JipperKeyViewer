@@ -133,7 +133,8 @@ namespace JipperKeyViewer.KeyViewer
     {
         public string name;
         public TMP_FontAsset font;
-        public FontEntry(string name, TMP_FontAsset font) { this.name = name; this.font = font; }
+        public string sourceFontName;
+        public FontEntry(string name, TMP_FontAsset font) { this.name = name; this.font = font; sourceFontName = name; }
     }
 
     /// <summary>
