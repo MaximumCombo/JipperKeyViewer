@@ -379,7 +379,28 @@ namespace JipperKeyViewer.KeyViewer
                 if (newRainFade != Settings.EnableRainFade)
                 {
                     Settings.EnableRainFade = newRainFade;
+                    if (!newRainFade)
+                    {
+                        // Reset all active rain alpha on fade disable / 禁用淡出时重置所有雨滴alpha
+                        if (rainSystem != null && Keys != null)
+                            rainSystem.ClearActiveDrops(Keys);
+                    }
                     SaveSettings();
+                }
+                if (Settings.EnableRainFade)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(I18n.Tr("fade_duration") + ":", GUILayout.Width(120));
+                    float newFadeDur = GUILayout.HorizontalSlider(Settings.RainFadeDuration, 0.03f, 5.0f, GUILayout.Width(200));
+                    string fadeDurText = GUILayout.TextField(newFadeDur.ToString("F2"), FloatFieldWidth(newFadeDur.ToString("F2")));
+                    if (float.TryParse(fadeDurText, out float parsedFade))
+                        newFadeDur = Mathf.Clamp(parsedFade, 0.03f, 5.0f);
+                    if (newFadeDur != Settings.RainFadeDuration)
+                    {
+                        Settings.RainFadeDuration = newFadeDur;
+                        SaveSettings();
+                    }
+                    GUILayout.EndHorizontal();
                 }
             }
 

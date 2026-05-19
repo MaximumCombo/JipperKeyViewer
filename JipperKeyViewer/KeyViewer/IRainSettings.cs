@@ -17,5 +17,6 @@ namespace JipperKeyViewer.KeyViewer
         float RainHeightRow2 { get; }
         float RainHeightRow3 { get; }
         bool EnableRainFade { get; }
+        float RainFadeDuration { get; }
     }
 }

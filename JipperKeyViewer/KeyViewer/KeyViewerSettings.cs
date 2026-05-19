@@ -93,7 +93,9 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Master rain effect toggle / 雨滴效果总开关</summary>
         public bool EnableRainEffect = true;
         /// <summary>Rain fade-out on key release toggle / 雨滴松开淡出开关</summary>
-        public bool EnableRainFade = false;
+        public bool EnableRainFade = true;
+        /// <summary>Duration of rain top-fade (seconds) / 雨滴顶部渐隐时长（秒）</summary>
+        public float RainFadeDuration = 0.5f;
         /// <summary>Per-row rain toggles / 每排雨滴独立开关</summary>
         public bool EnableRainForRow1 = true;
         public bool EnableRainForRow2 = true;

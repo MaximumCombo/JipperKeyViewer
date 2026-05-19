@@ -147,6 +147,11 @@ namespace JipperKeyViewer.KeyViewer
                         if (Settings.EnableRainEffect)
                             rainSystem.TriggerRainEffect(idx, key);
                     }
+                    else
+                    {
+                        if (Settings.EnableRainEffect && Settings.EnableRainFade)
+                            rainSystem.ReleaseRainEffect(idx, key);
+                    }
                 }
             }
         }
