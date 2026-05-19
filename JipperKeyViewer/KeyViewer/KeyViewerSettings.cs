@@ -179,7 +179,13 @@ namespace JipperKeyViewer.KeyViewer
             footkey14Text = footkey14Text ?? new string[14];
             footkey16Text = footkey16Text ?? new string[16];
             Count = Count ?? new int[36];
-            if (PerKeyBackground == null || PerKeyBackground.Length != 38)
+            if (PerKeyBackground == null || PerKeyBackground.Length != 38 ||
+                PerKeyBackgroundClicked == null || PerKeyBackgroundClicked.Length != 38 ||
+                PerKeyOutline == null || PerKeyOutline.Length != 38 ||
+                PerKeyOutlineClicked == null || PerKeyOutlineClicked.Length != 38 ||
+                PerKeyText == null || PerKeyText.Length != 38 ||
+                PerKeyTextClicked == null || PerKeyTextClicked.Length != 38 ||
+                PerKeyRainColor == null || PerKeyRainColor.Length != 38)
                 InitPerKeyColors();
         }
     }

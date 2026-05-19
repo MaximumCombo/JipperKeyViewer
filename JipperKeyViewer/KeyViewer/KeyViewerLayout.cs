@@ -529,7 +529,7 @@ namespace JipperKeyViewer.KeyViewer
                 int footIndex = i - 20;
                 if (footKeyCodes != null && footIndex >= 0 && footIndex < footKeyCodes.Length)
                 {
-                    string displayText = footTexts != null && !string.IsNullOrEmpty(footTexts[footIndex])
+                    string displayText = footTexts != null && footIndex < footTexts.Length && !string.IsNullOrEmpty(footTexts[footIndex])
                         ? footTexts[footIndex] : KeyToString(footKeyCodes[footIndex]);
                     key.text.text = displayText;
                 }
@@ -793,6 +793,7 @@ namespace JipperKeyViewer.KeyViewer
                         Keys[i].outline.color = Settings.Outline;
                         Keys[i].text.color = Settings.Text;
                         if (Keys[i].value != null) Keys[i].value.color = Settings.Text;
+                        Keys[i].rainColor = rainSystem.GetRainColor(Keys[i].color);
                     }
                 }
                 if (footKeyCodes != null)
@@ -849,6 +850,15 @@ namespace JipperKeyViewer.KeyViewer
             SelectedKey = -1;
             if (Keys != null)
             {
+                for (int i = 0; i < 20; i++)
+                {
+                    var key = Keys[i];
+                    if (key != null)
+                    {
+                        foreach (var rain in key.rainList)
+                            rainSystem.ReturnRawRain(rain);
+                    }
+                }
                 rainSystem.ClearActiveDrops(Keys);
                 for (int i = 0; i < 20; i++)
                 {
@@ -881,7 +891,16 @@ namespace JipperKeyViewer.KeyViewer
             SelectedKey = -1;
             if (Keys != null)
             {
-                rainSystem.ClearActiveDrops(Keys);
+                for (int i = 20; i < 36; i++)
+                {
+                    var key = Keys[i];
+                    if (key == null) continue;
+                    while (key.rawRainQueue.Count > 0)
+                        rainSystem.ReturnRawRain(key.rawRainQueue.Dequeue());
+                    foreach (var rain in key.rainList)
+                        rainSystem.ReturnRawRain(rain);
+                    key.rainList.Clear();
+                }
                 for (int i = 20; i < 36; i++)
                 {
                     if (Keys[i] != null && Keys[i].gameObject != null)

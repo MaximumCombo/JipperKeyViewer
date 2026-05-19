@@ -211,7 +211,7 @@ namespace JipperKeyViewer.KeyViewer
             SaveSettings();
             for (int i = fontList.Count - 1; i >= 0; i--)
                 if (fontList[i].font == null) fontList.RemoveAt(i);
-            if (Settings.FontIndex >= fontList.Count)
+            if (fontList.Count == 0 || Settings.FontIndex >= fontList.Count)
                 Settings.FontIndex = 0;
             fontRestored = false;
             LinkFallbackFonts();

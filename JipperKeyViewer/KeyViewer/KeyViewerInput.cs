@@ -103,7 +103,7 @@ namespace JipperKeyViewer.KeyViewer
                     "None" => " ", "Tab" => "\u21E5", "Backslash" => "\\", "Backspace" => "Back",
                     "Slash" => "/", "LBracket" => "[", "RBracket" => "]", "Semicolon" => ";",
                     "Comma" => ",", "Quote" => "'", "UpArrow" => "\u2191", "DownArrow" => "\u2193",
-                    "LeftArrow" => "\u2190", "RightArrow" => "\u2192", "Space" => "\u2423",
+                    "LArrow" => "\u2190", "RArrow" => "\u2192", "Space" => "\u2423",
                     "BackQuote" => "`", "PageDown" => "Pg\u2193", "PageUp" => "Pg\u2191",
                     "CapsLock" => "\u21EA", "Insert" => "Ins",
                     _ => s

@@ -79,7 +79,7 @@ namespace JipperKeyViewer.KeyViewer
 
             // Font selection dropdown / 字体选择下拉菜单
             GUILayout.Label(I18n.Tr("font_style") + ":");
-            string curFont = fontList.Count > 0 ? fontList[Settings.FontIndex].name : "None";
+            string curFont = fontList.Count > 0 ? fontList[Mathf.Clamp(Settings.FontIndex, 0, fontList.Count - 1)].name : "None";
             if (GUILayout.Button((fontListExpanded ? "\u25BC " : "\u25B6 ") + curFont, GUILayout.MinWidth(200)))
                 fontListExpanded = !fontListExpanded;
             if (fontListExpanded)
