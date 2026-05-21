@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       version:
@@ -39,7 +39,7 @@ jobs:
           if ("${{ github.event.inputs.version }}") {
             $v = "${{ github.event.inputs.version }}"
           } else {
-            $v = "${{ github.ref_name }}" -replace '^v', ''
+            $v = "${{ github.ref_name }}"
           }
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host "Version: $v"
@@ -104,7 +104,7 @@ jobs:
         if: steps.body.outputs.has_body == '1'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
+          tag_name: ${{ github.event.inputs.version }}
           body_path: dist/release-body.md
           files: |
             dist/JipperKeyViewer-AssetBundle.zip
