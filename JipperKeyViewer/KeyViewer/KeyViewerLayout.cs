@@ -46,6 +46,7 @@ namespace JipperKeyViewer.KeyViewer
             switch (Settings.KeyViewerStyle)
             {
                 case KeyviewerStyle.Key12: Initialize12KeyViewer(); break;
+                case KeyviewerStyle.Key14: Initialize14KeyViewer(); break;
                 case KeyviewerStyle.Key16: Initialize16KeyViewer(); break;
                 case KeyviewerStyle.Key20: Initialize20KeyViewer(); break;
                 case KeyviewerStyle.Key8:  Initialize8KeyViewer();  break;
@@ -210,6 +211,22 @@ namespace JipperKeyViewer.KeyViewer
             Keys[11] = CreateKey(11, 54 * 4 + 81, 225 - remove, 50, 1);
             Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
             Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
+        }
+
+        /// <summary>
+        /// Initialize 14-key layout (8 front + 6 back) / 初始化 14 键布局（8 前排 + 6 后排）
+        /// </summary>
+        private void Initialize14KeyViewer()
+        {
+            int remove = Settings.DownLocation ? 200 : 0;
+            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 299 - remove, 50, 0);
+            for (int i = 0; i < 6; i++)
+            {
+                int j = BackSequence14[i];
+                Keys[j] = CreateKey(j, 54 + 54 * i, 245 - remove, 50, 1);
+            }
+            Kps = CreateKey(-1, 0, 199 - remove, 212, -1, true);
+            Total = CreateKey(-2, 216, 199 - remove, 212, -1, true);
         }
 
         /// <summary>
@@ -552,6 +569,7 @@ namespace JipperKeyViewer.KeyViewer
                 KeyviewerStyle.Key8 => (dl ? 233 - 200 : 233) - 15,
                 KeyviewerStyle.Key10 => (dl ? 225 - 200 : 225) - 25,
                 KeyviewerStyle.Key12 => (dl ? 225 - 200 : 225) - 25,
+                KeyviewerStyle.Key14 => (dl ? 199 - 200 : 199) - 15,
                 KeyviewerStyle.Key16 => (dl ? 220 - 200 : 220) - 15,
                 KeyviewerStyle.Key20 => (dl ? 225 - 200 : 225) - 25,
                 _ => (dl ? 220 - 200 : 220) - 15
@@ -569,6 +587,7 @@ namespace JipperKeyViewer.KeyViewer
                 KeyviewerStyle.Key8 => 279 + 25,
                 KeyviewerStyle.Key10 => 279 + 25,
                 KeyviewerStyle.Key12 => 279 + 25,
+                KeyviewerStyle.Key14 => 299 + 25,
                 KeyviewerStyle.Key16 => 320 + 25,
                 KeyviewerStyle.Key20 => 333 + 25,
                 _ => 320 + 25
@@ -611,6 +630,17 @@ namespace JipperKeyViewer.KeyViewer
                     SetKeyPosition(11, baseX + 54 * 4 + 81, baseY + 225 - remove);
                     SetKeyPosition(-1, baseX + 0, baseY + 225 - remove);
                     SetKeyPosition(-2, baseX + 81 + 54 * 5, baseY + 225 - remove);
+                    break;
+                case KeyviewerStyle.Key14:
+                    for (int i = 0; i < 8; i++)
+                        SetKeyPosition(i, baseX + 54 * i, baseY + 299 - remove);
+                    for (int i = 0; i < 6; i++)
+                    {
+                        int j = BackSequence14[i];
+                        SetKeyPosition(j, baseX + 54 + 54 * i, baseY + 245 - remove);
+                    }
+                    SetKeyPosition(-1, baseX + 0, baseY + 199 - remove);
+                    SetKeyPosition(-2, baseX + 216, baseY + 199 - remove);
                     break;
                 case KeyviewerStyle.Key16:
                     for (int i = 0; i < 8; i++)
@@ -879,6 +909,7 @@ namespace JipperKeyViewer.KeyViewer
             switch (Settings.KeyViewerStyle)
             {
                 case KeyviewerStyle.Key12: Initialize12KeyViewer(); break;
+                case KeyviewerStyle.Key14: Initialize14KeyViewer(); break;
                 case KeyviewerStyle.Key16: Initialize16KeyViewer(); break;
                 case KeyviewerStyle.Key20: Initialize20KeyViewer(); break;
                 case KeyviewerStyle.Key8:  Initialize8KeyViewer();  break;
@@ -937,6 +968,7 @@ namespace JipperKeyViewer.KeyViewer
             {
                 KeyviewerStyle.Key8 => Settings.key8,
                 KeyviewerStyle.Key12 => Settings.key12,
+                KeyviewerStyle.Key14 => Settings.key14,
                 KeyviewerStyle.Key16 => Settings.key16,
                 KeyviewerStyle.Key20 => Settings.key20,
                 KeyviewerStyle.Key10 => Settings.key10,
@@ -972,6 +1004,7 @@ namespace JipperKeyViewer.KeyViewer
             {
                 KeyviewerStyle.Key8 => Settings.key8Text,
                 KeyviewerStyle.Key12 => Settings.key12Text,
+                KeyviewerStyle.Key14 => Settings.key14Text,
                 KeyviewerStyle.Key16 => Settings.key16Text,
                 KeyviewerStyle.Key20 => Settings.key20Text,
                 KeyviewerStyle.Key10 => Settings.key10Text,
@@ -1007,6 +1040,7 @@ namespace JipperKeyViewer.KeyViewer
             {
                 KeyviewerStyle.Key8 => BackSequence8,
                 KeyviewerStyle.Key12 => BackSequence12,
+                KeyviewerStyle.Key14 => BackSequence14,
                 KeyviewerStyle.Key16 => BackSequence16,
                 KeyviewerStyle.Key20 => BackSequence20,
                 KeyviewerStyle.Key10 => BackSequence10,

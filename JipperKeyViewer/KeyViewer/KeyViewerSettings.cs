@@ -35,6 +35,11 @@ namespace JipperKeyViewer.KeyViewer
             KeyCode.Space, KeyCode.C, KeyCode.Comma, KeyCode.Period
         };
         public string[] key12Text = new string[12];
+        public KeyCode[] key14 = {
+            KeyCode.Tab, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.E, KeyCode.P, KeyCode.Equals, KeyCode.Backspace, KeyCode.Backslash,
+            KeyCode.Space, KeyCode.C, KeyCode.Comma, KeyCode.Period, KeyCode.CapsLock, KeyCode.LeftShift
+        };
+        public string[] key14Text = new string[14];
         public KeyCode[] key16 = {
             KeyCode.Tab, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.E, KeyCode.P, KeyCode.Equals, KeyCode.Backspace, KeyCode.Backslash,
             KeyCode.Space, KeyCode.C, KeyCode.Comma, KeyCode.Period, KeyCode.CapsLock, KeyCode.LeftShift, KeyCode.Return, KeyCode.H
@@ -170,6 +175,7 @@ namespace JipperKeyViewer.KeyViewer
             key8Text = key8Text ?? new string[8];
             key10Text = key10Text ?? new string[10];
             key12Text = key12Text ?? new string[12];
+            key14Text = key14Text ?? new string[14];
             key16Text = key16Text ?? new string[16];
             key20Text = key20Text ?? new string[20];
             footkey2Text = footkey2Text ?? new string[2];

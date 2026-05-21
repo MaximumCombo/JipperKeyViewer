@@ -33,11 +33,12 @@ namespace JipperKeyViewer.KeyViewer
         public static readonly byte[] BackSequence8 = Array.Empty<byte>();
         public static readonly byte[] BackSequence10 = new byte[] { 8, 9 };
         public static readonly byte[] BackSequence12 = new byte[] { 9, 8, 10, 11 };
+        public static readonly byte[] BackSequence14 = new byte[] { 9, 8, 10, 11, 12, 13 };
         public static readonly byte[] BackSequence16 = new byte[] { 12, 13, 9, 8, 10, 11, 14, 15 };
         public static readonly byte[] BackSequence20 = new byte[] { 12, 13, 9, 8, 10, 11, 14, 15, 17, 16, 18, 19 };
 
         /// <summary>Display names for main key layout selection grid / 主按键布局选择网格的显示名称</summary>
-        static readonly string[] KeyLayoutNames = { "12K", "16K", "20K", "10K", "8K" };
+        static readonly string[] KeyLayoutNames = { "12K", "16K", "20K", "10K", "8K", "14K" };
         /// <summary>Display names for foot key layout selection grid / 脚键布局选择网格的显示名称</summary>
         static readonly string[] FootKeyLayoutNames = { "Off", "2K", "4K", "6K", "8K", "10K", "12K", "14K", "16K" };
 
@@ -292,6 +293,7 @@ namespace JipperKeyViewer.KeyViewer
                         Settings.key8Text = Settings.key8Text ?? new string[8];
                         Settings.key10Text = Settings.key10Text ?? new string[10];
                         Settings.key12Text = Settings.key12Text ?? new string[12];
+                        Settings.key14Text = Settings.key14Text ?? new string[14];
                         Settings.key16Text = Settings.key16Text ?? new string[16];
                         Settings.key20Text = Settings.key20Text ?? new string[20];
                         Settings.footkey2Text = Settings.footkey2Text ?? new string[2];
