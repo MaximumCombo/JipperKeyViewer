@@ -13,16 +13,7 @@ on:
         description: 'Release notes (Markdown). Copy template from .github/RELEASE_TEMPLATE.md'
         required: true
         type: string
-        default: |
-          **Full Changelog**: https://github.com/2228293026/JipperKeyViewer/compare/vPREV...vVERSION
-
-          # :tada: JipperKeyViewer vVERSION
-          ## :sparkles: New Features
-
-          ## :bug: Bug Fixes
-
-
-          # Supports Alpha latest / 支持Alpha最新 / Alpha 최신 버전 지원
+        default: **Full Changelog**: https://github.com/2228293026/JipperKeyViewer/compare/vPREV...vVERSION\n\n# :tada: JipperKeyViewer vVERSION\n## :sparkles: New Features\n\n## :bug: Bug Fixes\n\n\n# Supports Alpha latest / 支持Alpha最新 / Alpha 최신 버전 지원
 
 permissions:
   contents: write
@@ -76,7 +67,7 @@ jobs:
           $date = Get-Date -Format "yyyy-MM-dd"
           "date=$date" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           if ($env:NOTES) {
-            $body = $env:NOTES + "`n`n---`n**Build Date**: " + $date
+            $body = $env:NOTES.Replace('\n', "`n") + "`n`n---`n**Build Date**: " + $date
             Set-Content -Path dist\release-body.md -Value $body -Encoding utf8
             "has_body=1" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           } else {
