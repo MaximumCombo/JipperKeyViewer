@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="JipperKeyViewer/JipperKeyViewer.csproj" Id="cdc7b262-d8a5-4aa8-ad51-4433c471b6dc" />
+  <Project Path="JipperKeyViewer-FileBased/JipperKeyViewer-FileBased.csproj" Id="8F6E4D2C-1A3B-5C7D-9E0F-2468ACE02468" />
 </Solution>

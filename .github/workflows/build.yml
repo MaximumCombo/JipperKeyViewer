@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '.gitattributes'
+      - '.gitignore'
+      - 'LICENSE*'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore JipperKeyViewer.slnx
+
+      - name: Build JipperKeyViewer (AssetBundle)
+        run: msbuild JipperKeyViewer\JipperKeyViewer.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+
+      - name: Build JipperKeyViewer-FileBased
+        run: msbuild JipperKeyViewer-FileBased\JipperKeyViewer-FileBased.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+
+      - name: Publish JipperKeyViewer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JipperKeyViewer-AssetBundle
+          path: |
+            JipperKeyViewer/bin/Release/JipperKeyViewer.dll
+            JipperKeyViewer/bin/Release/JipperKeyViewer.pdb
+
+      - name: Publish JipperKeyViewer-FileBased artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JipperKeyViewer-FileBased
+          path: |
+            JipperKeyViewer-FileBased/bin/Release/JipperKeyViewer-FileBased.dll
+            JipperKeyViewer-FileBased/bin/Release/JipperKeyViewer-FileBased.pdb

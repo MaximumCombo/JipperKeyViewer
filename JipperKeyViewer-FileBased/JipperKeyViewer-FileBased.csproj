@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{CDC7B262-D8A5-4AA8-AD51-4433C471B6DC}</ProjectGuid>
+    <ProjectGuid>{8F6E4D2C-1A3B-5C7D-9E0F-2468ACE02468}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>JipperKeyViewer</RootNamespace>
-    <AssemblyName>JipperKeyViewer</AssemblyName>
+    <AssemblyName>JipperKeyViewer-FileBased</AssemblyName>
     <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <LangVersion>latest</LangVersion>
@@ -44,10 +44,6 @@
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\libs\UnityEngine.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>..\libs\UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
@@ -92,21 +88,24 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="KeyViewer\FootKeyviewerStyle.cs" />
-    <Compile Include="KeyViewer\I18n.cs" />
-    <Compile Include="KeyViewer\Key.cs" />
-    <Compile Include="KeyViewer\KeyViewer.cs" />
-    <Compile Include="KeyViewer\KeyViewerGUI.cs" />
-    <Compile Include="KeyViewer\KeyViewerInput.cs" />
-    <Compile Include="KeyViewer\KeyViewerLayout.cs" />
+    <!-- Linked shared source files / 共享源文件链接 -->
+    <Compile Include="..\JipperKeyViewer\KeyViewer\FootKeyviewerStyle.cs" Link="KeyViewer\FootKeyviewerStyle.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\I18n.cs" Link="KeyViewer\I18n.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\Key.cs" Link="KeyViewer\Key.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewer.cs" Link="KeyViewer\KeyViewer.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerGUI.cs" Link="KeyViewer\KeyViewerGUI.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerInput.cs" Link="KeyViewer\KeyViewerInput.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerLayout.cs" Link="KeyViewer\KeyViewerLayout.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\RainSystem.cs" Link="KeyViewer\RainSystem.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\IRainSettings.cs" Link="KeyViewer\IRainSettings.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerSettings.cs" Link="KeyViewer\KeyViewerSettings.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\KeyviewerStyle.cs" Link="KeyViewer\KeyviewerStyle.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\Rain.cs" Link="KeyViewer\Rain.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\RawRain.cs" Link="KeyViewer\RawRain.cs" />
+    <Compile Include="..\JipperKeyViewer\Main.cs" Link="Main.cs" />
+    <!-- File-based resource loading (replaces AssetBundle version) / 基于文件的资源加载（替代 AssetBundle 版本） -->
     <Compile Include="KeyViewer\KeyViewerResources.cs" />
-    <Compile Include="KeyViewer\RainSystem.cs" />
-    <Compile Include="KeyViewer\IRainSettings.cs" />
-    <Compile Include="KeyViewer\KeyViewerSettings.cs" />
-    <Compile Include="KeyViewer\KeyviewerStyle.cs" />
-    <Compile Include="KeyViewer\Rain.cs" />
-    <Compile Include="KeyViewer\RawRain.cs" />
-    <Compile Include="Main.cs" />
+    <!-- Project-specific AssemblyInfo / 项目专属 AssemblyInfo -->
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
 
