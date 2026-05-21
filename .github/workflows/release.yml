@@ -24,6 +24,9 @@ on:
 
           # Supports Alpha latest / 支持Alpha最新 / Alpha 최신 버전 지원
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: windows-latest
