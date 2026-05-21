@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.5.1). Tag v{version} will be created.'
+        required: true
+      release_notes:
+        description: 'Release notes (Markdown). Copy template from .github/RELEASE_TEMPLATE.md'
+        required: true
+        type: string
+        default: |
+          **Full Changelog**: https://github.com/2228293026/JipperKeyViewer/compare/vPREV...vVERSION
+
+          # :tada: JipperKeyViewer vVERSION
+          ## :sparkles: New Features
+
+          ## :bug: Bug Fixes
+
+
+          # Supports Alpha latest / 支持Alpha最新 / Alpha 최신 버전 지원
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore JipperKeyViewer.slnx
+
+      - name: Build JipperKeyViewer (AssetBundle)
+        run: msbuild JipperKeyViewer\JipperKeyViewer.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+
+      - name: Build JipperKeyViewer-FileBased
+        run: msbuild JipperKeyViewer-FileBased\JipperKeyViewer-FileBased.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+
+      - name: Package JipperKeyViewer (AssetBundle)
+        shell: pwsh
+        run: |
+          $dist = "dist\JipperKeyViewer"
+          New-Item -ItemType Directory -Force -Path $dist\assets, $dist\lang | Out-Null
+          Copy-Item JipperKeyViewer\bin\Release\JipperKeyViewer.dll $dist\
+          Copy-Item Info.json $dist\
+          Copy-Item JipperKeyViewer\lang\lang.json $dist\lang\
+          Copy-Item JipperKeyViewer\assets\keyviewer_resources $dist\assets\
+
+      - name: Package JipperKeyViewer-FileBased
+        shell: pwsh
+        run: |
+          $dist = "dist\JipperKeyViewer-FileBased"
+          New-Item -ItemType Directory -Force -Path $dist\assets, $dist\lang | Out-Null
+          Copy-Item JipperKeyViewer-FileBased\bin\Release\JipperKeyViewer-FileBased.dll $dist\
+          Copy-Item JipperKeyViewer-FileBased\Info.json $dist\
+          Copy-Item JipperKeyViewer\lang\lang.json $dist\lang\
+          Copy-Item JipperKeyViewer-FileBased\assets\* $dist\assets\
+
+      - name: Prepare release body
+        id: body
+        env:
+          NOTES: ${{ github.event.inputs.release_notes || '' }}
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          "date=$date" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          if ($env:NOTES) {
+            $body = $env:NOTES + "`n`n---`n**Build Date**: " + $date
+            Set-Content -Path dist\release-body.md -Value $body -Encoding utf8
+            "has_body=1" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } else {
+            "has_body=0" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+
+      - name: Zip JipperKeyViewer (AssetBundle)
+        shell: pwsh
+        run: Compress-Archive -Path dist\JipperKeyViewer\* -DestinationPath dist\JipperKeyViewer-AssetBundle.zip
+
+      - name: Zip JipperKeyViewer-FileBased
+        shell: pwsh
+        run: Compress-Archive -Path dist\JipperKeyViewer-FileBased\* -DestinationPath dist\JipperKeyViewer-FileBased.zip
+
+      - name: Create GitHub Release (manual dispatch)
+        if: steps.body.outputs.has_body == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          body_path: dist/release-body.md
+          files: |
+            dist/JipperKeyViewer-AssetBundle.zip
+            dist/JipperKeyViewer-FileBased.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release (tag push)
+        if: steps.body.outputs.has_body == '0'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            ---
+            **Build Date**: ${{ steps.body.outputs.date }}
+          append_body: true
+          files: |
+            dist/JipperKeyViewer-AssetBundle.zip
+            dist/JipperKeyViewer-FileBased.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

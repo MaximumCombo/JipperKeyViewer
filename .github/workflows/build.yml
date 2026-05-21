@@ -32,18 +32,34 @@ jobs:
       - name: Build JipperKeyViewer-FileBased
         run: msbuild JipperKeyViewer-FileBased\JipperKeyViewer-FileBased.csproj /p:Configuration=Release /p:Platform="AnyCPU"
 
-      - name: Publish JipperKeyViewer artifact
+      - name: Package JipperKeyViewer (AssetBundle version)
+        shell: pwsh
+        run: |
+          $dist = "dist\JipperKeyViewer"
+          New-Item -ItemType Directory -Force -Path $dist\assets | Out-Null
+          Copy-Item JipperKeyViewer\bin\Release\JipperKeyViewer.dll $dist\
+          Copy-Item Info.json $dist\
+          Copy-Item JipperKeyViewer\lang\ $dist\lang\ -Recurse
+          Copy-Item JipperKeyViewer\assets\keyviewer_resources $dist\assets\
+
+      - name: Package JipperKeyViewer-FileBased
+        shell: pwsh
+        run: |
+          $dist = "dist\JipperKeyViewer-FileBased"
+          New-Item -ItemType Directory -Force -Path $dist\assets | Out-Null
+          Copy-Item JipperKeyViewer-FileBased\bin\Release\JipperKeyViewer-FileBased.dll $dist\
+          Copy-Item JipperKeyViewer-FileBased\Info.json $dist\
+          Copy-Item JipperKeyViewer\lang\ $dist\lang\ -Recurse
+          Copy-Item JipperKeyViewer-FileBased\assets\* $dist\assets\
+
+      - name: Upload JipperKeyViewer (AssetBundle)
         uses: actions/upload-artifact@v4
         with:
           name: JipperKeyViewer-AssetBundle
-          path: |
-            JipperKeyViewer/bin/Release/JipperKeyViewer.dll
-            JipperKeyViewer/bin/Release/JipperKeyViewer.pdb
+          path: dist/JipperKeyViewer/
 
-      - name: Publish JipperKeyViewer-FileBased artifact
+      - name: Upload JipperKeyViewer-FileBased
         uses: actions/upload-artifact@v4
         with:
           name: JipperKeyViewer-FileBased
-          path: |
-            JipperKeyViewer-FileBased/bin/Release/JipperKeyViewer-FileBased.dll
-            JipperKeyViewer-FileBased/bin/Release/JipperKeyViewer-FileBased.pdb
+          path: dist/JipperKeyViewer-FileBased/

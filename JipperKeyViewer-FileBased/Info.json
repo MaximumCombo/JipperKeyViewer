@@ -1,0 +1,12 @@
+{
+  "Id": "JipperKeyViewer-FileBased",
+  "DisplayName": "Jipper Key Viewer (File-Based)",
+  "Author": "HitMargin",
+  "Version": "1.5.0",
+  "ManagerVersion": "0.27.0",
+  "Requirements": [],
+  "AssemblyName": "JipperKeyViewer-FileBased.dll",
+  "EntryMethod": "JipperKeyViewer.Main.Load",
+  "HomePage": "https://github.com/2228293026/JipperKeyViewer",
+  "Repository": "https://raw.githubusercontent.com/2228293026/JipperKeyViewer/refs/heads/master/Repository.json"
+}
