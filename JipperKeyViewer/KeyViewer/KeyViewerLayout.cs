@@ -43,15 +43,7 @@ namespace JipperKeyViewer.KeyViewer
             rectTransform.offsetMin = rectTransform.offsetMax = Vector2.zero;
             // Initialize main keys based on selected layout / 根据选中的布局初始化主按键
             Keys = new Key[36];
-            switch (Settings.KeyViewerStyle)
-            {
-                case KeyviewerStyle.Key12: Initialize12KeyViewer(); break;
-                case KeyviewerStyle.Key14: Initialize14KeyViewer(); break;
-                case KeyviewerStyle.Key16: Initialize16KeyViewer(); break;
-                case KeyviewerStyle.Key20: Initialize20KeyViewer(); break;
-                case KeyviewerStyle.Key8:  Initialize8KeyViewer();  break;
-                case KeyviewerStyle.Key10: Initialize10KeyViewer(); break;
-            }
+            InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
             // Initialize foot keys based on selected layout / 根据选中的布局初始化脚键
             switch (Settings.FootKeyViewerStyle)
             {
@@ -198,95 +190,125 @@ namespace JipperKeyViewer.KeyViewer
             if (key.value != null) key.value.color = key.text.color;
         }
 
-        /// <summary>
-        /// Initialize 12-key layout (8 front + 4 back) / 初始化 12 键布局（8 前排 + 4 后排）
-        /// </summary>
-        private void Initialize12KeyViewer()
-        {
-            int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 279 - remove, 50, 0);
-            Keys[8] = CreateKey(8, 81 + 54, 225 - remove, 77, 1);
-            Keys[9] = CreateKey(9, 81, 225 - remove, 50, 1);
-            Keys[10] = CreateKey(10, 54 * 4, 225 - remove, 77, 1);
-            Keys[11] = CreateKey(11, 54 * 4 + 81, 225 - remove, 50, 1);
-            Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
-            Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
-        }
+        struct ExtraSlot { public int index; public float x, y, w; public int rainRow; public bool slim; }
 
-        /// <summary>
-        /// Initialize 14-key layout (8 front + 6 back) / 初始化 14 键布局（8 前排 + 6 后排）
-        /// </summary>
-        private void Initialize14KeyViewer()
+        struct LayoutDesc { public float frontY; public ExtraSlot[] extras; public float statsY; }
+
+        private static LayoutDesc GetLayout(KeyviewerStyle style)
         {
-            int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 299 - remove, 50, 0);
-            for (int i = 0; i < 6; i++)
+            return style switch
             {
-                int j = BackSequence14[i];
-                Keys[j] = CreateKey(j, 54 + 54 * i, 245 - remove, 50, 1);
-            }
-            Kps = CreateKey(-1, 0, 199 - remove, 212, -1, true);
-            Total = CreateKey(-2, 216, 199 - remove, 212, -1, true);
+                KeyviewerStyle.Key8 => new LayoutDesc
+                {
+                    frontY = 279, statsY = 233,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = -1, x = 0, y = 233, w = 212, rainRow = -1, slim = true },
+                        new() { index = -2, x = 216, y = 233, w = 212, rainRow = -1, slim = true },
+                    }
+                },
+                KeyviewerStyle.Key10 => new LayoutDesc
+                {
+                    frontY = 279, statsY = 225,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = 8, x = 81, y = 225, w = 129, rainRow = 1 },
+                        new() { index = 9, x = 216, y = 225, w = 129, rainRow = 1 },
+                        new() { index = -1, x = 0, y = 225, w = 77, rainRow = -1 },
+                        new() { index = -2, x = 351, y = 225, w = 77, rainRow = -1 },
+                    }
+                },
+                KeyviewerStyle.Key12 => new LayoutDesc
+                {
+                    frontY = 279, statsY = 225,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = 8, x = 135, y = 225, w = 77, rainRow = 1 },
+                        new() { index = 9, x = 81, y = 225, w = 50, rainRow = 1 },
+                        new() { index = 10, x = 216, y = 225, w = 77, rainRow = 1 },
+                        new() { index = 11, x = 297, y = 225, w = 50, rainRow = 1 },
+                        new() { index = -1, x = 0, y = 225, w = 77, rainRow = -1 },
+                        new() { index = -2, x = 351, y = 225, w = 77, rainRow = -1 },
+                    }
+                },
+                KeyviewerStyle.Key14 => new LayoutDesc
+                {
+                    frontY = 299, statsY = 199,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = 9, x = 54, y = 245, w = 50, rainRow = 1 },
+                        new() { index = 8, x = 108, y = 245, w = 50, rainRow = 1 },
+                        new() { index = 10, x = 162, y = 245, w = 50, rainRow = 1 },
+                        new() { index = 11, x = 216, y = 245, w = 50, rainRow = 1 },
+                        new() { index = 12, x = 270, y = 245, w = 50, rainRow = 1 },
+                        new() { index = 13, x = 324, y = 245, w = 50, rainRow = 1 },
+                        new() { index = -1, x = 0, y = 199, w = 212, rainRow = -1, slim = true },
+                        new() { index = -2, x = 216, y = 199, w = 212, rainRow = -1, slim = true },
+                    }
+                },
+                KeyviewerStyle.Key16 => new LayoutDesc
+                {
+                    frontY = 320, statsY = 220,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = 12, x = 0, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 13, x = 54, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 9, x = 108, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 8, x = 162, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 10, x = 216, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 11, x = 270, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 14, x = 324, y = 266, w = 50, rainRow = 1 },
+                        new() { index = 15, x = 378, y = 266, w = 50, rainRow = 1 },
+                        new() { index = -1, x = 0, y = 220, w = 212, rainRow = -1, slim = true },
+                        new() { index = -2, x = 216, y = 220, w = 212, rainRow = -1, slim = true },
+                    }
+                },
+                KeyviewerStyle.Key20 => new LayoutDesc
+                {
+                    frontY = 333, statsY = 225,
+                    extras = new ExtraSlot[]
+                    {
+                        new() { index = 12, x = 0, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 13, x = 54, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 9, x = 108, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 8, x = 162, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 10, x = 216, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 11, x = 270, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 14, x = 324, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 15, x = 378, y = 279, w = 50, rainRow = 1 },
+                        new() { index = 16, x = 135, y = 225, w = 77, rainRow = 3 },
+                        new() { index = 17, x = 81, y = 225, w = 50, rainRow = 3 },
+                        new() { index = 18, x = 216, y = 225, w = 77, rainRow = 3 },
+                        new() { index = 19, x = 297, y = 225, w = 50, rainRow = 3 },
+                        new() { index = -1, x = 0, y = 225, w = 77, rainRow = -1 },
+                        new() { index = -2, x = 351, y = 225, w = 77, rainRow = -1 },
+                    }
+                },
+                _ => throw new System.ArgumentOutOfRangeException(nameof(style), style, null)
+            };
         }
 
-        /// <summary>
-        /// Initialize 16-key layout (8 front + 8 back) / 初始化 16 键布局（8 前排 + 8 后排）
-        /// </summary>
-        private void Initialize16KeyViewer()
+        private void InitializeMainKeys(LayoutDesc layout)
         {
             int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 320 - remove, 50, 0);
             for (int i = 0; i < 8; i++)
+                Keys[i] = CreateKey(i, 54 * i, layout.frontY - remove, 50, 0);
+            foreach (var e in layout.extras)
             {
-                int j = BackSequence16[i];
-                Keys[j] = CreateKey(j, 54 * i, 266 - remove, 50, 1);
+                Key key = CreateKey(e.index, e.x, e.y - remove, e.w, e.rainRow, e.slim);
+                if (e.index == -1) Kps = key;
+                else if (e.index == -2) Total = key;
+                else Keys[e.index] = key;
             }
-            Kps = CreateKey(-1, 0, 220 - remove, 212, -1, true);
-            Total = CreateKey(-2, 216, 220 - remove, 212, -1, true);
         }
 
-        /// <summary>
-        /// Initialize 20-key layout (8 front + 8 back + 4 third row) / 初始化 20 键布局（8 前排 + 8 后排 + 4 第三排）
-        /// </summary>
-        private void Initialize20KeyViewer()
+        private void RepositionMainKeys(LayoutDesc layout, float baseX, float baseY)
         {
             int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 333 - remove, 50, 0);
             for (int i = 0; i < 8; i++)
-            {
-                int j = BackSequence20[i];
-                Keys[j] = CreateKey(j, 54 * i, 279 - remove, 50, 1);
-            }
-            Keys[16] = CreateKey(16, 81 + 54, 225 - remove, 77, 3);
-            Keys[17] = CreateKey(17, 81, 225 - remove, 50, 3);
-            Keys[18] = CreateKey(18, 54 * 4, 225 - remove, 77, 3);
-            Keys[19] = CreateKey(19, 54 * 4 + 81, 225 - remove, 50, 3);
-            Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
-            Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
-        }
-
-        /// <summary>
-        /// Initialize 8-key layout (single row) / 初始化 8 键布局（单排）
-        /// </summary>
-        private void Initialize8KeyViewer()
-        {
-            int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 279 - remove, 50, 0);
-            Kps = CreateKey(-1, 0, 233 - remove, 212, -1, true);
-            Total = CreateKey(-2, 216, 233 - remove, 212, -1, true);
-        }
-
-        /// <summary>
-        /// Initialize 10-key layout (8 front + 2 back) / 初始化 10 键布局（8 前排 + 2 后排）
-        /// </summary>
-        private void Initialize10KeyViewer()
-        {
-            int remove = Settings.DownLocation ? 200 : 0;
-            for (int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 279 - remove, 50, 0);
-            Keys[8] = CreateKey(8, 81, 225 - remove, 129, 1);
-            Keys[9] = CreateKey(9, 54 * 4, 225 - remove, 129, 1);
-            Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
-            Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
+                SetKeyPosition(i, baseX + 54 * i, baseY + layout.frontY - remove);
+            foreach (var e in layout.extras)
+                SetKeyPosition(e.index, baseX + e.x, baseY + e.y - remove);
         }
 
         /// <summary>
@@ -564,17 +586,10 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private float GetMinMainKeyOffset()
         {
+            var layout = GetLayout(Settings.KeyViewerStyle);
             bool dl = Settings.DownLocation;
-            return Settings.KeyViewerStyle switch
-            {
-                KeyviewerStyle.Key8 => (dl ? 233 - 200 : 233) - 15,
-                KeyviewerStyle.Key10 => (dl ? 225 - 200 : 225) - 25,
-                KeyviewerStyle.Key12 => (dl ? 225 - 200 : 225) - 25,
-                KeyviewerStyle.Key14 => (dl ? 199 - 200 : 199) - 15,
-                KeyviewerStyle.Key16 => (dl ? 220 - 200 : 220) - 15,
-                KeyviewerStyle.Key20 => (dl ? 225 - 200 : 225) - 25,
-                _ => (dl ? 220 - 200 : 220) - 15
-            };
+            float halfH = layout.extras[layout.extras.Length - 1].slim ? 15 : 25;
+            return (dl ? layout.statsY - 200 : layout.statsY) - halfH;
         }
 
         /// <summary>Total width of the main key layout in reference pixels / 主按键布局的总宽度（参考像素）</summary>
@@ -583,16 +598,7 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Topmost key top edge Y for normalized positioning / 归一化定位中最顶部按键顶边的 Y 值</summary>
         private float GetMaxMainKeyOffset()
         {
-            return Settings.KeyViewerStyle switch
-            {
-                KeyviewerStyle.Key8 => 279 + 25,
-                KeyviewerStyle.Key10 => 279 + 25,
-                KeyviewerStyle.Key12 => 279 + 25,
-                KeyviewerStyle.Key14 => 299 + 25,
-                KeyviewerStyle.Key16 => 320 + 25,
-                KeyviewerStyle.Key20 => 333 + 25,
-                _ => 320 + 25
-            };
+            return GetLayout(Settings.KeyViewerStyle).frontY + 25;
         }
 
         /// <summary>Width of the foot key section in reference pixels / 脚键区域的宽度（参考像素）</summary>
@@ -620,70 +626,7 @@ namespace JipperKeyViewer.KeyViewer
             float topBaseY = 1080f - GetMaxMainKeyOffset() + remove;
             float bottomBaseY = -GetMinMainKeyOffset();
             float baseY = Mathf.Lerp(bottomBaseY, topBaseY, 1f - norm.y);
-            switch (Settings.KeyViewerStyle)
-            {
-                case KeyviewerStyle.Key12:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 279 - remove);
-                    SetKeyPosition(8, baseX + 81 + 54, baseY + 225 - remove);
-                    SetKeyPosition(9, baseX + 81, baseY + 225 - remove);
-                    SetKeyPosition(10, baseX + 54 * 4, baseY + 225 - remove);
-                    SetKeyPosition(11, baseX + 54 * 4 + 81, baseY + 225 - remove);
-                    SetKeyPosition(-1, baseX + 0, baseY + 225 - remove);
-                    SetKeyPosition(-2, baseX + 81 + 54 * 5, baseY + 225 - remove);
-                    break;
-                case KeyviewerStyle.Key14:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 299 - remove);
-                    for (int i = 0; i < 6; i++)
-                    {
-                        int j = BackSequence14[i];
-                        SetKeyPosition(j, baseX + 54 + 54 * i, baseY + 245 - remove);
-                    }
-                    SetKeyPosition(-1, baseX + 0, baseY + 199 - remove);
-                    SetKeyPosition(-2, baseX + 216, baseY + 199 - remove);
-                    break;
-                case KeyviewerStyle.Key16:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 320 - remove);
-                    for (int i = 0; i < 8; i++)
-                    {
-                        int j = BackSequence16[i];
-                        SetKeyPosition(j, baseX + 54 * i, baseY + 266 - remove);
-                    }
-                    SetKeyPosition(-1, baseX + 0, baseY + 220 - remove);
-                    SetKeyPosition(-2, baseX + 216, baseY + 220 - remove);
-                    break;
-                case KeyviewerStyle.Key20:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 333 - remove);
-                    for (int i = 0; i < 8; i++)
-                    {
-                        int j = BackSequence20[i];
-                        SetKeyPosition(j, baseX + 54 * i, baseY + 279 - remove);
-                    }
-                    SetKeyPosition(16, baseX + 81 + 54, baseY + 225 - remove);
-                    SetKeyPosition(17, baseX + 81, baseY + 225 - remove);
-                    SetKeyPosition(18, baseX + 54 * 4, baseY + 225 - remove);
-                    SetKeyPosition(19, baseX + 54 * 4 + 81, baseY + 225 - remove);
-                    SetKeyPosition(-1, baseX + 0, baseY + 225 - remove);
-                    SetKeyPosition(-2, baseX + 81 + 54 * 5, baseY + 225 - remove);
-                    break;
-                case KeyviewerStyle.Key8:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 279 - remove);
-                    SetKeyPosition(-1, baseX + 0, baseY + 233 - remove);
-                    SetKeyPosition(-2, baseX + 216, baseY + 233 - remove);
-                    break;
-                case KeyviewerStyle.Key10:
-                    for (int i = 0; i < 8; i++)
-                        SetKeyPosition(i, baseX + 54 * i, baseY + 279 - remove);
-                    SetKeyPosition(8, baseX + 81, baseY + 225 - remove);
-                    SetKeyPosition(9, baseX + 54 * 4, baseY + 225 - remove);
-                    SetKeyPosition(-1, baseX + 0, baseY + 225 - remove);
-                    SetKeyPosition(-2, baseX + 81 + 54 * 5, baseY + 225 - remove);
-                    break;
-            }
+            RepositionMainKeys(GetLayout(Settings.KeyViewerStyle), baseX, baseY);
         }
 
         private void ResetFootKeyViewerPosition()
@@ -898,15 +841,7 @@ namespace JipperKeyViewer.KeyViewer
                     Object.Destroy(Kps.gameObject);
             }
             rainSystem.ClearPool();
-            switch (Settings.KeyViewerStyle)
-            {
-                case KeyviewerStyle.Key12: Initialize12KeyViewer(); break;
-                case KeyviewerStyle.Key14: Initialize14KeyViewer(); break;
-                case KeyviewerStyle.Key16: Initialize16KeyViewer(); break;
-                case KeyviewerStyle.Key20: Initialize20KeyViewer(); break;
-                case KeyviewerStyle.Key8:  Initialize8KeyViewer();  break;
-                case KeyviewerStyle.Key10: Initialize10KeyViewer(); break;
-            }
+            InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
             if (Settings.CustomPositionEnabled)
                 ResetKeyViewerPosition();
         }
