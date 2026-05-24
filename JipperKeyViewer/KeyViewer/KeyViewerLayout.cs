@@ -485,9 +485,6 @@ namespace JipperKeyViewer.KeyViewer
                         _ => -169   // Row 2 offset / 第2排偏移
                     });
                     transform.localScale = Vector3.one;
-                    var rainCanvas = key.rain.AddComponent<Canvas>();
-                    rainCanvas.overrideSorting = true;
-                    key.rain.AddComponent<GraphicRaycaster>();
                 }
                 key.color = (byte)raining;
             }
