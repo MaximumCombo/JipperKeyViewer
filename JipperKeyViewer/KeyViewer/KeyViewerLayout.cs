@@ -192,7 +192,7 @@ namespace JipperKeyViewer.KeyViewer
 
         struct ExtraSlot { public int index; public float x, y, w; public int rainRow; public bool slim; }
 
-        struct LayoutDesc { public float frontY; public ExtraSlot[] extras; public float statsY; }
+        struct LayoutDesc { public float frontY; public float bottomY; public ExtraSlot[] extras; }
 
         private static LayoutDesc GetLayout(KeyviewerStyle style)
         {
@@ -200,7 +200,7 @@ namespace JipperKeyViewer.KeyViewer
             {
                 KeyviewerStyle.Key8 => new LayoutDesc
                 {
-                    frontY = 279, statsY = 233,
+                    frontY = 279, bottomY = 218,
                     extras = new ExtraSlot[]
                     {
                         new() { index = -1, x = 0, y = 233, w = 212, rainRow = -1, slim = true },
@@ -209,7 +209,7 @@ namespace JipperKeyViewer.KeyViewer
                 },
                 KeyviewerStyle.Key10 => new LayoutDesc
                 {
-                    frontY = 279, statsY = 225,
+                    frontY = 279, bottomY = 200,
                     extras = new ExtraSlot[]
                     {
                         new() { index = 8, x = 81, y = 225, w = 129, rainRow = 1 },
@@ -220,7 +220,7 @@ namespace JipperKeyViewer.KeyViewer
                 },
                 KeyviewerStyle.Key12 => new LayoutDesc
                 {
-                    frontY = 279, statsY = 225,
+                    frontY = 279, bottomY = 200,
                     extras = new ExtraSlot[]
                     {
                         new() { index = 8, x = 135, y = 225, w = 77, rainRow = 1 },
@@ -233,7 +233,7 @@ namespace JipperKeyViewer.KeyViewer
                 },
                 KeyviewerStyle.Key14 => new LayoutDesc
                 {
-                    frontY = 299, statsY = 199,
+                    frontY = 299, bottomY = 184,
                     extras = new ExtraSlot[]
                     {
                         new() { index = 9, x = 54, y = 245, w = 50, rainRow = 1 },
@@ -248,7 +248,7 @@ namespace JipperKeyViewer.KeyViewer
                 },
                 KeyviewerStyle.Key16 => new LayoutDesc
                 {
-                    frontY = 320, statsY = 220,
+                    frontY = 320, bottomY = 205,
                     extras = new ExtraSlot[]
                     {
                         new() { index = 12, x = 0, y = 266, w = 50, rainRow = 1 },
@@ -265,7 +265,7 @@ namespace JipperKeyViewer.KeyViewer
                 },
                 KeyviewerStyle.Key20 => new LayoutDesc
                 {
-                    frontY = 333, statsY = 225,
+                    frontY = 333, bottomY = 200,
                     extras = new ExtraSlot[]
                     {
                         new() { index = 12, x = 0, y = 279, w = 50, rainRow = 1 },
@@ -586,10 +586,8 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private float GetMinMainKeyOffset()
         {
-            var layout = GetLayout(Settings.KeyViewerStyle);
-            bool dl = Settings.DownLocation;
-            float halfH = layout.extras[layout.extras.Length - 1].slim ? 15 : 25;
-            return (dl ? layout.statsY - 200 : layout.statsY) - halfH;
+            float bottomY = GetLayout(Settings.KeyViewerStyle).bottomY;
+            return Settings.DownLocation ? bottomY - 200 : bottomY;
         }
 
         /// <summary>Total width of the main key layout in reference pixels / 主按键布局的总宽度（参考像素）</summary>
