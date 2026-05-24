@@ -147,7 +147,7 @@ namespace JipperKeyViewer.KeyViewer
             I18n.Load();
             I18n.Lang = Settings.Language;
             currentKeyViewerStyle = Settings.KeyViewerStyle;
-            rainSystem = new RainSystem(new RainSettings(Settings));
+            rainSystem = new RainSystem(Settings);
             TryLoadResources();
             wasEnabled = Settings.Enabled;
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -252,7 +252,6 @@ namespace JipperKeyViewer.KeyViewer
                 long now = Stopwatch.ElapsedMilliseconds;
                 ProcessKeySelection();              // Handle key rebinding input / 处理按键重新绑定输入
                 ProcessMainAndFootKeysInUpdate(now); // Detect key presses / 检测按键按下
-                rainSystem.ProcessKeyQueues(Keys);  // Spawn rain objects from queue / 从队列生成雨滴对象
                 ProcessKpsInUpdate(now);            // Update KPS counter / 更新 KPS 计数器
                 if (Settings.EnableRainEffect) rainSystem.UpdateEffects(Keys); // Update rain drop positions / 更新雨滴位置
             }

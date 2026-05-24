@@ -351,7 +351,6 @@ namespace JipperKeyViewer.KeyViewer
             transform.anchoredPosition = new Vector2(x, y);
             transform.localScale = Vector3.one;
             Key key = obj.AddComponent<Key>();
-            key.rainSystem = rainSystem;
             key.isPressed = false;
             GameObject gameObject;
             Image image;
@@ -887,15 +886,6 @@ namespace JipperKeyViewer.KeyViewer
             SelectedKey = -1;
             if (Keys != null)
             {
-                for (int i = 0; i < 20; i++)
-                {
-                    var key = Keys[i];
-                    if (key != null)
-                    {
-                        foreach (var rain in key.rainList)
-                            rainSystem.ReturnRawRain(rain);
-                    }
-                }
                 rainSystem.ClearActiveDrops(Keys);
                 for (int i = 0; i < 20; i++)
                 {
@@ -933,10 +923,15 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     var key = Keys[i];
                     if (key == null) continue;
-                    while (key.rawRainQueue.Count > 0)
-                        rainSystem.ReturnRawRain(key.rawRainQueue.Dequeue());
                     foreach (var rain in key.rainList)
+                    {
+                        if (rain.rainComponent != null)
+                        {
+                            rainSystem.ReturnRain(rain.rainComponent);
+                            rain.rainComponent = null;
+                        }
                         rainSystem.ReturnRawRain(rain);
+                    }
                     key.rainList.Clear();
                 }
                 for (int i = 20; i < 36; i++)

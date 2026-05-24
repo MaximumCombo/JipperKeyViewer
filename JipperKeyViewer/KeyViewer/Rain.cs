@@ -5,7 +5,6 @@ namespace JipperKeyViewer.KeyViewer
 {
     public class Rain : MonoBehaviour
     {
-        public RainSystem rainSystem;
         public Image image;
         public new RectTransform transform;
         public RawRain rawRain;
@@ -35,16 +34,6 @@ namespace JipperKeyViewer.KeyViewer
         {
             fadingOut = true;
             fadeTimer = 0f;
-        }
-
-        private void Update()
-        {
-            if (rawRain != null && rawRain.removed)
-            {
-                rainSystem.ReturnRawRain(rawRain);
-                rawRain = null;
-                rainSystem.ReturnRain(this);
-            }
         }
     }
 }

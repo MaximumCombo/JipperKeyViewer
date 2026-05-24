@@ -6,12 +6,12 @@ namespace JipperKeyViewer.KeyViewer
 {
     public class RainSystem
     {
-        private readonly IRainSettings settings;
+        private readonly KeyViewerSettings settings;
 
         private readonly Stack<Rain> rainPool = new Stack<Rain>();
         private readonly Stack<RawRain> rawRainPool = new Stack<RawRain>();
         private readonly List<int> rainActiveKeys = new List<int>();
-        private int pendingRainQueueCount;
+        private readonly HashSet<int> rainActiveSet = new HashSet<int>();
 
         private const int MAX_RAWRAIN_POOL_SIZE = 60;
         private const int MAX_POOL_SIZE = 30;
@@ -21,20 +21,9 @@ namespace JipperKeyViewer.KeyViewer
         private float cachedRainSpeed1, cachedRainSpeed2, cachedRainSpeed3;
         private float cachedRainHeight1, cachedRainHeight2, cachedRainHeight3;
 
-        public RainSystem(IRainSettings settings)
+        public RainSystem(KeyViewerSettings settings)
         {
             this.settings = settings;
-        }
-
-        public void ProcessKeyQueues(Key[] keys)
-        {
-            if (keys == null || pendingRainQueueCount == 0) return;
-            pendingRainQueueCount = 0;
-            for (int i = 0; i < keys.Length; i++)
-            {
-                Key key = keys[i];
-                if (key != null) key.ProcessRainQueue();
-            }
         }
 
         public void UpdateEffects(Key[] keys)
@@ -67,8 +56,14 @@ namespace JipperKeyViewer.KeyViewer
             {
                 int ki = rainActiveKeys[i];
                 Key key = keys[ki];
-                if (key == null) { rainActiveKeys.RemoveAt(i--); continue; }
-                if (key.rainList.Count == 0) { rainActiveKeys.RemoveAt(i--); continue; }
+                if (key == null || key.rainList.Count == 0)
+                {
+                    rainActiveSet.Remove(ki);
+                    rainActiveKeys[i] = rainActiveKeys[rainActiveKeys.Count - 1];
+                    rainActiveKeys.RemoveAt(rainActiveKeys.Count - 1);
+                    i--;
+                    continue;
+                }
 
                 int row = ki < 8 ? 0 : (ki < 16 ? 1 : 2);
 
@@ -81,8 +76,7 @@ namespace JipperKeyViewer.KeyViewer
 
                     if (!rain.UpdateLocation(updateSize, rowSpeeds[row], rowHeights[row], dt))
                     {
-                        rain.removed = true;
-                        key.rainList.RemoveAt(j);
+                        ReturnRainAndRawRain(rain, key, j);
                         continue;
                     }
 
@@ -111,12 +105,23 @@ namespace JipperKeyViewer.KeyViewer
                         r.image.color = c;
                         if (t >= 1f)
                         {
-                            rain.removed = true;
-                            key.rainList.RemoveAt(j);
+                            ReturnRainAndRawRain(rain, key, j);
                         }
                     }
                 }
             }
+        }
+
+        private void ReturnRainAndRawRain(RawRain rain, Key key, int listIndex)
+        {
+            rain.removed = true;
+            if (rain.rainComponent != null)
+            {
+                ReturnRain(rain.rainComponent);
+                rain.rainComponent = null;
+            }
+            ReturnRawRain(rain);
+            key.rainList.RemoveAt(listIndex);
         }
 
         public void TriggerRainEffect(int keyIndex, Key key)
@@ -138,17 +143,18 @@ namespace JipperKeyViewer.KeyViewer
         {
             if (keys == null) return;
             rainActiveKeys.Clear();
+            rainActiveSet.Clear();
             foreach (var key in keys)
             {
                 if (key == null) continue;
-                while (key.rawRainQueue.Count > 0)
-                {
-                    var rawRain = key.rawRainQueue.Dequeue();
-                    ReturnRawRain(rawRain);
-                }
                 foreach (var rain in key.rainList)
                 {
-                    rain.removed = true;
+                    if (rain.rainComponent != null)
+                    {
+                        ReturnRain(rain.rainComponent);
+                        rain.rainComponent = null;
+                    }
+                    ReturnRawRain(rain);
                 }
                 key.rainList.Clear();
             }
@@ -191,7 +197,6 @@ namespace JipperKeyViewer.KeyViewer
                 r = go.AddComponent<Rain>();
                 r.Init(parent);
             }
-            r.rainSystem = this;
             return r;
         }
 
@@ -244,11 +249,18 @@ namespace JipperKeyViewer.KeyViewer
             if (key == null || key.rain == null) return;
 
             RawRain rawRain = GetRawRain(key.rain.transform, key.color);
-            key.rawRainQueue.Enqueue(rawRain);
+            Rain rainComponent = GetRainFromPool(key.rain.transform);
+            rainComponent.rawRain = rawRain;
+            rawRain.rainComponent = rainComponent;
+            rainComponent.image.color = key.rainColor;
+
             key.rainList.Add(rawRain);
-            pendingRainQueueCount++;
-            if (key.rainList.Count == 1 && !rainActiveKeys.Contains(keyIndex))
+
+            if (!rainActiveSet.Contains(keyIndex))
+            {
+                rainActiveSet.Add(keyIndex);
                 rainActiveKeys.Add(keyIndex);
+            }
         }
 
         private bool IsRainEnabledForKey(int keyIndex)
@@ -258,26 +270,5 @@ namespace JipperKeyViewer.KeyViewer
             if (keyIndex < 20) return settings.EnableRainForRow3;
             return false;
         }
-    }
-
-    internal class RainSettings : IRainSettings
-    {
-        private readonly KeyViewerSettings s;
-        public RainSettings(KeyViewerSettings s) { this.s = s; }
-
-        public Color RainColor => s.RainColor;
-        public Color RainColor2 => s.RainColor2;
-        public Color RainColor3 => s.RainColor3;
-        public bool EnableRainForRow1 => s.EnableRainForRow1;
-        public bool EnableRainForRow2 => s.EnableRainForRow2;
-        public bool EnableRainForRow3 => s.EnableRainForRow3;
-        public float RainSpeedRow1 => s.RainSpeedRow1;
-        public float RainSpeedRow2 => s.RainSpeedRow2;
-        public float RainSpeedRow3 => s.RainSpeedRow3;
-        public float RainHeightRow1 => s.RainHeightRow1;
-        public float RainHeightRow2 => s.RainHeightRow2;
-        public float RainHeightRow3 => s.RainHeightRow3;
-        public bool EnableRainFade => s.EnableRainFade;
-        public float RainFadeDuration => s.RainFadeDuration;
     }
 }
