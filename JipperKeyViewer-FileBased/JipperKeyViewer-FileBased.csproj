@@ -97,7 +97,6 @@
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerInput.cs" Link="KeyViewer\KeyViewerInput.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerLayout.cs" Link="KeyViewer\KeyViewerLayout.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\RainSystem.cs" Link="KeyViewer\RainSystem.cs" />
-    <Compile Include="..\JipperKeyViewer\KeyViewer\IRainSettings.cs" Link="KeyViewer\IRainSettings.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerSettings.cs" Link="KeyViewer\KeyViewerSettings.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyviewerStyle.cs" Link="KeyViewer\KeyviewerStyle.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\Rain.cs" Link="KeyViewer\Rain.cs" />
