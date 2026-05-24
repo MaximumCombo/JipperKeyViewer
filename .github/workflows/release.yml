@@ -144,31 +144,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update version in repository files
+      - name: Update version in release assets
         shell: pwsh
         run: |
           $v = '${{ steps.ver.outputs.version }}'
-          # Checkout master branch (tag checkout puts us in detached HEAD)
-          git fetch origin master
-          git checkout master
-          # Update Info.json (AssetBundle)
-          $info1 = Get-Content Info.json -Raw | ConvertFrom-Json
+          # Update version in already-copied Info.json files (in dist/ only)
+          $info1 = Get-Content dist\JipperKeyViewer\Info.json -Raw | ConvertFrom-Json
           $info1.Version = $v
-          $info1 | ConvertTo-Json -Depth 10 | Set-Content Info.json -Encoding utf8
-          # Update Info.json (FileBased)
-          $info2 = Get-Content JipperKeyViewer-FileBased\Info.json -Raw | ConvertFrom-Json
+          $info1 | ConvertTo-Json -Depth 10 | Set-Content dist\JipperKeyViewer\Info.json -Encoding utf8
+          $info2 = Get-Content dist\JipperKeyViewer-FileBased\Info.json -Raw | ConvertFrom-Json
           $info2.Version = $v
-          $info2 | ConvertTo-Json -Depth 10 | Set-Content JipperKeyViewer-FileBased\Info.json -Encoding utf8
-          # Update Repository.json
-          $repo = Get-Content Repository.json -Raw | ConvertFrom-Json
-          foreach ($rel in $repo.Releases) {
-            $rel.Version = $v
-            $rel.DownloadUrl = $rel.DownloadUrl -replace '/download/[^/]+/', "/download/$v/"
-          }
-          $repo | ConvertTo-Json -Depth 10 | Set-Content Repository.json -Encoding utf8
-          # Commit and push
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Info.json JipperKeyViewer-FileBased/Info.json Repository.json
-          git commit -m "chore: bump version to $v" || echo "No changes to commit"
-          git push
+          $info2 | ConvertTo-Json -Depth 10 | Set-Content dist\JipperKeyViewer-FileBased\Info.json -Encoding utf8
