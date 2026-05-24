@@ -148,6 +148,9 @@ jobs:
         shell: pwsh
         run: |
           $v = '${{ steps.ver.outputs.version }}'
+          # Checkout master branch (tag checkout puts us in detached HEAD)
+          git fetch origin master
+          git checkout master
           # Update Info.json (AssetBundle)
           $info1 = Get-Content Info.json -Raw | ConvertFrom-Json
           $info1.Version = $v
