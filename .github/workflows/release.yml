@@ -47,6 +47,16 @@ jobs:
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host "Version: $v"
 
+      - name: Detect prerelease
+        id: pre
+        shell: pwsh
+        run: |
+          if ("${{ steps.ver.outputs.version }}" -match '-(pre|rc|alpha|beta|dev)') {
+            "is_prerelease=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } else {
+            "is_prerelease=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+
       - name: Build JipperKeyViewer (AssetBundle)
         run: msbuild JipperKeyViewer\JipperKeyViewer.csproj /p:Configuration=Release /p:Platform="AnyCPU" /p:Version=${{ steps.ver.outputs.version }}
 
@@ -109,6 +119,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.version }}
           body_path: dist/release-body.md
+          prerelease: ${{ steps.pre.outputs.is_prerelease == 'true' }}
           files: |
             dist/JipperKeyViewer-AssetBundle.zip
             dist/JipperKeyViewer-FileBased.zip
@@ -121,6 +132,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          prerelease: ${{ steps.pre.outputs.is_prerelease == 'true' }}
           body: |
             ---
             **Build Date**: ${{ steps.body.outputs.date }}
