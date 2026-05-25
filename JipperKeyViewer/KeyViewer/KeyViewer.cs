@@ -238,10 +238,14 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         void Update()
         {
+            // Skip all processing when game window is not focused / 窗口未激活时跳过所有处理
+            if (!Application.isFocused) return;
+
+            bool enabled = Settings.Enabled;
             // Detect toggle change for enabled/disabled / 检测启用/禁用状态切换
-            if (wasEnabled != Settings.Enabled)
+            if (wasEnabled != enabled)
             {
-                if (Settings.Enabled)
+                if (enabled)
                 {
                     EnableKeyViewer();
                     if (Settings.CustomPositionEnabled)
@@ -251,9 +255,9 @@ namespace JipperKeyViewer.KeyViewer
                     }
                 }
                 else DisableKeyViewer();
-                wasEnabled = Settings.Enabled;
+                wasEnabled = enabled;
             }
-            if (KeyViewerObject != null && Settings.Enabled)
+            if (KeyViewerObject != null && enabled)
             {
                 long now = Stopwatch.ElapsedMilliseconds;
                 ProcessKeySelection();              // Handle key rebinding input / 处理按键重新绑定输入

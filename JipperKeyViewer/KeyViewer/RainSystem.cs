@@ -32,6 +32,7 @@ namespace JipperKeyViewer.KeyViewer
         public void UpdateEffects(Key[] keys)
         {
             if (keys == null || keys.Length == 0) return;
+            if (rainActiveKeys.Count == 0) return;
 
             if (cachedRainSpeed1 != settings.RainSpeedRow1 || cachedRainSpeed2 != settings.RainSpeedRow2 ||
                 cachedRainSpeed3 != settings.RainSpeedRow3 || cachedRainHeight1 != settings.RainHeightRow1 ||
@@ -52,8 +53,10 @@ namespace JipperKeyViewer.KeyViewer
             }
 
             float fadeDuration = settings.RainFadeDuration;
-            float dt = Time.unscaledDeltaTime * 1000f;
-            float dtSec = Time.unscaledDeltaTime;
+            // Single native property call per frame / 每帧只调用一次原生属性
+            float unscaledDt = Time.unscaledDeltaTime;
+            float dt = unscaledDt * 1000f;
+            float dtSec = unscaledDt;
 
             for (int i = 0; i < rainActiveKeys.Count; i++)
             {

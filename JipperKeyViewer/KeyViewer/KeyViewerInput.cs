@@ -123,5 +123,142 @@ namespace JipperKeyViewer.KeyViewer
 
         /// <summary>Calculate IMGUI text field width based on content length / 根据内容长度计算 IMGUI 文本框宽度</summary>
         private static GUILayoutOption FloatFieldWidth(string text) => GUILayout.Width(Mathf.Max(30, text.Length * 9));
+
+        // ======================== Input Processing (hot path) / 输入处理（热路径） ========================
+
+        /// <summary>
+        /// Check each main key and foot key for state changes (press/release) every frame / 每帧检查每个主键和脚键的状态变化（按下/释放）
+        /// </summary>
+        private void ProcessMainAndFootKeysInUpdate(long elapsedMilliseconds)
+        {
+            if (cachedKeyStyle != Settings.KeyViewerStyle)
+            {
+                cachedMainKeys = GetKeyCode();
+                cachedGhostKeys = GetGhostKeyCode();
+                cachedKeyStyle = Settings.KeyViewerStyle;
+                ghostKeyStates = new bool[cachedGhostKeys.Length];
+            }
+            else if (cachedGhostKeys == null)
+            {
+                cachedGhostKeys = GetGhostKeyCode();
+                ghostKeyStates = new bool[cachedGhostKeys.Length];
+            }
+            if (cachedFootStyle != Settings.FootKeyViewerStyle)
+            {
+                cachedFootKeys = GetFootKeyCode();
+                cachedFootStyle = Settings.FootKeyViewerStyle;
+            }
+            ProcessKeyGroup(cachedMainKeys, 0, elapsedMilliseconds);
+            if (cachedFootKeys != null)
+                ProcessKeyGroup(cachedFootKeys, 20, elapsedMilliseconds);
+            if (Total != null && Total.value != null && lastTotal != Settings.TotalCount)
+            {
+                lastTotal = Settings.TotalCount;
+                Total.value.text = FormatCount(lastTotal);
+            }
+        }
+
+        /// <summary>
+        /// Process a group of keys for input state changes / 处理一组按键的输入状态变化
+        /// Local-caches Settings references for hot-path performance / 局部缓存 Settings 引用以优化热路径性能
+        /// </summary>
+        private void ProcessKeyGroup(KeyCode[] keyCodes, int baseIndex, long elapsedMs)
+        {
+            int[] countArr = Settings.Count;
+            bool rainEnabled = Settings.EnableRainEffect;
+            for (int i = 0; i < keyCodes.Length; i++)
+            {
+                int idx = baseIndex + i;
+                if (idx >= Keys.Length) continue;
+                Key key = Keys[idx];
+                if (key == null) continue;
+                bool current = Input.GetKey(keyCodes[i]);
+                if (current != key.isPressed)
+                {
+                    UpdateKeyColors(idx, current);
+                    key.isPressed = current;
+                    if (current)
+                    {
+                        countArr[idx]++;
+                        Settings.TotalCount++;
+                        if (key.value != null)
+                            key.value.text = FormatCount(countArr[idx]);
+                        PressTimes.Enqueue(elapsedMs);
+                        if (rainEnabled) rainSystem.TriggerRainEffect(idx, key);
+                    }
+                    else
+                    {
+                        if (rainEnabled) rainSystem.ReleaseRainEffect(idx, key);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculate KPS by removing presses older than 1 second / 通过移除超过 1 秒的按下记录计算 KPS
+        /// </summary>
+        private void ProcessKpsInUpdate(long elapsedMilliseconds)
+        {
+            if (PressTimes == null) return;
+            while (PressTimes.Count > 0 && elapsedMilliseconds - PressTimes.Peek() > 1000)
+                PressTimes.Dequeue();
+            int currentKps = PressTimes.Count;
+            if (lastKps != currentKps)
+            {
+                lastKps = currentKps;
+                if (Kps != null && Kps.value != null) Kps.value.text = currentKps.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Process ghost key inputs — secondary keys that only trigger rain, no display/count / 处理鬼键输入 — 仅触发雨滴的副按键，无显示/计数
+        /// ghostKeyStates is guaranteed non-null and same length as cachedGhostKeys (initialized in ProcessMainAndFootKeysInUpdate before this runs) / ghostKeyStates 保证非空且长度与 cachedGhostKeys 相同（在此方法之前由 ProcessMainAndFootKeysInUpdate 初始化）
+        /// </summary>
+        private void ProcessGhostKeysInUpdate()
+        {
+            if (cachedGhostKeys == null) return;
+            bool rainEnabled = Settings.EnableRainEffect;
+            bool ghostRainEnabled = Settings.EnableGhostRain;
+            if (!rainEnabled || !ghostRainEnabled) return;
+
+            KeyCode[] ghosts = cachedGhostKeys;
+            for (int i = 0; i < ghosts.Length; i++)
+            {
+                if (ghosts[i] == KeyCode.None) continue;
+
+                bool current = Input.GetKey(ghosts[i]);
+                if (current != ghostKeyStates[i])
+                {
+                    ghostKeyStates[i] = current;
+                    if (current)
+                        rainSystem.TriggerGhostRain(i, Keys[i]);
+                    else
+                        rainSystem.ReleaseGhostRain(i, Keys[i]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update key visual colors based on press state / 根据按下状态更新按键视觉颜色
+        /// </summary>
+        private void UpdateKeyColors(int i, bool pressed)
+        {
+            if (Keys == null || i >= Keys.Length) return;
+            Key key = Keys[i];
+            if (key == null) return;
+            if (Settings.EnablePerKeyColors && i < 36)
+            {
+                key.background.color = pressed ? Settings.PerKeyBackgroundClicked[i] : Settings.PerKeyBackground[i];
+                key.outline.color = pressed ? Settings.PerKeyOutlineClicked[i] : Settings.PerKeyOutline[i];
+                key.text.color = pressed ? Settings.PerKeyTextClicked[i] : Settings.PerKeyText[i];
+            }
+            else
+            {
+                key.background.color = pressed ? Settings.BackgroundClicked : Settings.Background;
+                key.outline.color = pressed ? Settings.OutlineClicked : Settings.Outline;
+                key.text.color = pressed ? Settings.TextClicked : Settings.Text;
+            }
+            if (key.value != null) key.value.color = key.text.color;
+        }
     }
 }
