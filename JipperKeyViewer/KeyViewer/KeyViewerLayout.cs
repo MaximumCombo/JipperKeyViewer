@@ -849,7 +849,6 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private void ChangeKeyViewer()
         {
-            currentKeyViewerStyle = Settings.KeyViewerStyle;
             ResetKeyViewer();
         }
 
