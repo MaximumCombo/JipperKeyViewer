@@ -17,7 +17,7 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private void ProcessKeySelection()
         {
-            if (SelectedKey == -1 || TextChanged || !Application.isFocused) return;
+            if (SelectedKey == -1 || changeState == 1 || !Application.isFocused) return;
             if (!Input.anyKeyDown) return;
 
             foreach (KeyCode keyCode in AllKeyCodes)
@@ -35,6 +35,15 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private void SetupKey(KeyCode keyCode)
         {
+            if (changeState == 2)
+            {
+                KeyCode[] ghostKeyCodes = GetGhostKeyCode();
+                if (SelectedKey < ghostKeyCodes.Length)
+                    ghostKeyCodes[SelectedKey] = keyCode;
+                SelectedKey = -1;
+                SaveSettings();
+                return;
+            }
             KeyCode[] keyCodes = GetKeyCode();
             KeyCode[] footKeyCodes = GetFootKeyCode();
             string[] keyTexts = GetKeyText();

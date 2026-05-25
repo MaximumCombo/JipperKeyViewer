@@ -72,6 +72,14 @@ namespace JipperKeyViewer.KeyViewer
         public string[] footkey14Text = new string[14];
         public string[] footkey16Text = new string[16];
 
+        // Ghost key bindings per layout — only trigger rain, no display/count / 鬼键绑定 — 仅触发雨滴，无显示/计数
+        public KeyCode[] GhostKey8 = new KeyCode[8];
+        public KeyCode[] GhostKey10 = new KeyCode[10];
+        public KeyCode[] GhostKey12 = new KeyCode[12];
+        public KeyCode[] GhostKey14 = new KeyCode[14];
+        public KeyCode[] GhostKey16 = new KeyCode[16];
+        public KeyCode[] GhostKey20 = new KeyCode[20];
+
         /// <summary>Per-key press counter (index 0-35) / 每个按键的按下计数（索引 0-35）</summary>
         public int[] Count = new int[36];
         /// <summary>Total key press count / 总按键次数</summary>
@@ -99,6 +107,8 @@ namespace JipperKeyViewer.KeyViewer
         public bool EnableRainEffect = true;
         /// <summary>Rain fade-out on key release toggle / 雨滴松开淡出开关</summary>
         public bool EnableRainFade = true;
+        /// <summary>Ghost rain toggle — secondary keys that only trigger rain / 鬼键雨滴开关 — 仅触发雨滴的副按键</summary>
+        public bool EnableGhostRain = false;
         /// <summary>Duration of rain top-fade (seconds) / 雨滴顶部渐隐时长（秒）</summary>
         public float RainFadeDuration = 0.5f;
         /// <summary>Per-row rain toggles / 每排雨滴独立开关</summary>
@@ -186,6 +196,12 @@ namespace JipperKeyViewer.KeyViewer
             footkey12Text = footkey12Text ?? new string[12];
             footkey14Text = footkey14Text ?? new string[14];
             footkey16Text = footkey16Text ?? new string[16];
+            GhostKey8 = GhostKey8 ?? new KeyCode[8];
+            GhostKey10 = GhostKey10 ?? new KeyCode[10];
+            GhostKey12 = GhostKey12 ?? new KeyCode[12];
+            GhostKey14 = GhostKey14 ?? new KeyCode[14];
+            GhostKey16 = GhostKey16 ?? new KeyCode[16];
+            GhostKey20 = GhostKey20 ?? new KeyCode[20];
             Count = Count ?? new int[36];
             if (PerKeyBackground == null || PerKeyBackground.Length != 38 ||
                 PerKeyBackgroundClicked == null || PerKeyBackgroundClicked.Length != 38 ||

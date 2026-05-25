@@ -11,6 +11,8 @@ namespace JipperKeyViewer.KeyViewer
         public Vector2? sizeDelta;
         public Vector2? anchoredPosition;
         public bool removed;
+        public bool isGhost;
+        public bool growing;
         public Rain rainComponent;
 
         public RawRain(Transform transform, byte color)

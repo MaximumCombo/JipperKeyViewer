@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 356289704
+CRC: 3748403155
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 8026ae1b81fc899c5c1fa7acc57649ce
+    Hash: 2cffabf9216a89ab789dbe752da4e2be
   TypeTreeHash:
     serializedVersion: 2
     Hash: b1ad5644a043d1357bf6e034c1427b5a
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 8026ae1b81fc899c5c1fa7acc57649ce
+    Hash: 2cffabf9216a89ab789dbe752da4e2be
 HashAppended: 0
 ClassTypes:
 - Class: 21
@@ -27,5 +27,6 @@ Assets:
 - Assets/_Assets/Fonts/MAPLESTORY_OTF_BOLD.OTF
 - Assets/_Assets/Fonts/cjkFonts-regular-normalized.otf
 - Assets/_Assets/Textures/KeyOutline.png
+- Assets/_Assets/Textures/GhostRain.png
 - Assets/_Assets/Textures/KeyBackground.png
 Dependencies: []

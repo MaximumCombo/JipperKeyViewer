@@ -103,6 +103,10 @@ namespace JipperKeyViewer.KeyViewer
                 if (keyOutlineSprite == null)
                     Main.Mod.Logger.Error("KeyViewer: KeyOutline not found in AssetBundle");
 
+                ghostRainSprite = bundle.LoadAsset<Sprite>("GhostRain");
+                if (ghostRainSprite == null)
+                    Main.Mod.Logger.Warning("KeyViewer: GhostRain not found in AssetBundle");
+
                 bundle.Unload(false);
             }
             else

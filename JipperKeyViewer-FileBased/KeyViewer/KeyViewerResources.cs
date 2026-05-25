@@ -67,6 +67,7 @@ namespace JipperKeyViewer.KeyViewer
 
             keyBackgroundSprite = LoadSpriteFromFile(Path.Combine(assetsDir, "KeyBackground.png"));
             keyOutlineSprite = LoadSpriteFromFile(Path.Combine(assetsDir, "KeyOutline.png"));
+            ghostRainSprite = LoadSpriteFromFile(Path.Combine(assetsDir, "GhostRain.png"));
 
             LoadFontFromFile(assetsDir, "MAPLESTORY_OTF_BOLD.OTF", "MapleStory", ref mapleFont, fontList);
             LoadCJKFontFromFile(assetsDir, "cjkFonts-regular-normalized.otf", "CJK (Default)", fontList);

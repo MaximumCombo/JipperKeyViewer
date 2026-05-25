@@ -76,6 +76,8 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Timestamp of last frame for delta calculation / 上一帧的时间戳，用于增量计算</summary>
         /// <summary>Whether the key change section in settings is expanded / 设置中按键更改区域是否展开</summary>
         bool KeyChangeExpanded;
+        /// <summary>Whether the ghost rain key section in settings is expanded / 设置中鬼键区域是否展开</summary>
+        bool GhostRainChangeExpanded;
         /// <summary>Whether the text change section in settings is expanded / 设置中文本更改区域是否展开</summary>
         bool TextChangeExpanded;
         /// <summary>Per-color-section expanded state in settings / 设置中每个颜色区域的展开状态</summary>
@@ -84,8 +86,8 @@ namespace JipperKeyViewer.KeyViewer
         KeyviewerStyle currentKeyViewerStyle;
         /// <summary>Currently selected key index for rebinding (-1 = none) / 当前为重新绑定选中的按键索引（-1 = 无）</summary>
         int SelectedKey = -1;
-        /// <summary>Whether user is editing text rather than binding a key / 用户是否在编辑文本而非绑定按键</summary>
-        bool TextChanged;
+        /// <summary>Current rebind mode: 0=key, 1=text, 2=ghost key / 当前重绑定模式：0=按键，1=文本，2=鬼键</summary>
+        int changeState;
 
         /// <summary>Path to the settings JSON file / 设置 JSON 文件路径</summary>
         static string ConfigPath
@@ -106,6 +108,8 @@ namespace JipperKeyViewer.KeyViewer
         Sprite keyBackgroundSprite;
         /// <summary>Cached outline sprite from AssetBundle / 从 AssetBundle 缓存的轮廓精灵</summary>
         Sprite keyOutlineSprite;
+        /// <summary>Cached ghost rain sprite (loaded from PNG file) / 从 PNG 文件缓存的鬼雨精灵</summary>
+        Sprite ghostRainSprite;
         /// <summary>Singleton instance reference / 单例实例引用</summary>
         public static KeyViewer instance;
         /// <summary>Rain effect system (object-pooled, zero-GC on hot path) / 雨滴效果系统</summary>
@@ -122,6 +126,10 @@ namespace JipperKeyViewer.KeyViewer
         private FootKeyviewerStyle cachedFootStyle = (FootKeyviewerStyle)(-1);
         /// <summary>Cached foot key array / 缓存的脚键数组</summary>
         private KeyCode[] cachedFootKeys;
+        /// <summary>Cached ghost key array / 缓存的鬼键数组</summary>
+        private KeyCode[] cachedGhostKeys;
+        /// <summary>Ghost key press state tracking / 鬼键按下状态跟踪</summary>
+        private bool[] ghostKeyStates;
         /// <summary>MapleStory font loaded from AssetBundle / 从 AssetBundle 加载的 MapleStory 字体</summary>
         private TMP_FontAsset mapleFont;
         /// <summary>Cache of per-font shadow materials / 每个字体的阴影材质缓存</summary>
@@ -149,6 +157,7 @@ namespace JipperKeyViewer.KeyViewer
             currentKeyViewerStyle = Settings.KeyViewerStyle;
             rainSystem = new RainSystem(Settings);
             TryLoadResources();
+            rainSystem.GhostRainSprite = ghostRainSprite;
             wasEnabled = Settings.Enabled;
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
@@ -253,6 +262,7 @@ namespace JipperKeyViewer.KeyViewer
                 ProcessKeySelection();              // Handle key rebinding input / 处理按键重新绑定输入
                 ProcessMainAndFootKeysInUpdate(now); // Detect key presses / 检测按键按下
                 ProcessKpsInUpdate(now);            // Update KPS counter / 更新 KPS 计数器
+                ProcessGhostKeysInUpdate();          // Process ghost key inputs / 处理鬼键输入
                 if (Settings.EnableRainEffect) rainSystem.UpdateEffects(Keys); // Update rain drop positions / 更新雨滴位置
             }
         }

@@ -402,6 +402,17 @@ namespace JipperKeyViewer.KeyViewer
                     }
                     GUILayout.EndHorizontal();
                 }
+
+                // Ghost rain toggle / 鬼键雨滴开关
+                GUILayout.Space(5);
+                bool newGhostRain = GUILayout.Toggle(Settings.EnableGhostRain, I18n.Tr("ghost_rain"));
+                if (newGhostRain != Settings.EnableGhostRain)
+                {
+                    Settings.EnableGhostRain = newGhostRain;
+                    if (!newGhostRain && rainSystem != null && Keys != null)
+                        rainSystem.ClearActiveDrops(Keys);
+                    SaveSettings();
+                }
             }
 
             GUILayout.Space(10);
@@ -410,6 +421,14 @@ namespace JipperKeyViewer.KeyViewer
             KeyChangeExpanded = GUILayout.Toggle(KeyChangeExpanded, (KeyChangeExpanded ? "\u25E2 " : "\u25B6 ") + I18n.Tr("key_change"));
             if (KeyChangeExpanded)
                 DrawKeyChangeSection();
+
+            // Ghost rain key rebinding section (only when rain + ghost rain enabled) / 鬼键重绑定区域（仅雨滴+鬼键启用时）
+            if (Settings.EnableRainEffect && Settings.EnableGhostRain)
+            {
+                GhostRainChangeExpanded = GUILayout.Toggle(GhostRainChangeExpanded, (GhostRainChangeExpanded ? "◢ " : "▶ ") + I18n.Tr("ghost_rain"));
+                if (GhostRainChangeExpanded)
+                    DrawGhostKeyChangeSection();
+            }
 
             // Custom text labels section / 自定义文本标签区域
             TextChangeExpanded = GUILayout.Toggle(TextChangeExpanded, (TextChangeExpanded ? "\u25E2 " : "\u25B6 ") + I18n.Tr("text_change"));
@@ -455,7 +474,7 @@ namespace JipperKeyViewer.KeyViewer
                 if (GUILayout.Button(KeyToString(keyCodes[i])))
                 {
                     SelectedKey = i;
-                    TextChanged = false;
+                    changeState = 0;
                 }
             }
             GUILayout.EndHorizontal();
@@ -470,7 +489,7 @@ namespace JipperKeyViewer.KeyViewer
                     if (GUILayout.Button(KeyToString(keyCodes[backSequence[i]])))
                     {
                         SelectedKey = backSequence[i];
-                        TextChanged = false;
+                        changeState = 0;
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -487,7 +506,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(KeyToString(keyCodes[i])))
                         {
                             SelectedKey = i;
-                            TextChanged = false;
+                            changeState = 0;
                         }
                     }
                 }
@@ -507,7 +526,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(KeyToString(footKeyCodes[i])))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = false;
+                            changeState = 0;
                         }
                     }
                     GUILayout.EndHorizontal();
@@ -520,7 +539,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(KeyToString(footKeyCodes[i])))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = false;
+                            changeState = 0;
                         }
                     }
             GUILayout.EndHorizontal();
@@ -533,7 +552,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(KeyToString(footKeyCodes[i])))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = false;
+                            changeState = 0;
                         }
                     }
                     for (int s = 0; s < 8 - remaining; s++)
@@ -542,9 +561,69 @@ namespace JipperKeyViewer.KeyViewer
                 }
             }
 
-            if (SelectedKey != -1 && !TextChanged)
+            if (SelectedKey != -1 && changeState == 0)
                 GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>");
             GUILayout.EndVertical();
+        }
+
+        /// <summary>
+        /// Draw the ghost key rebinding section / 绘制鬼键重绑定区域
+        /// Shows ghost key slots — click unbound to bind, click bound to clear / 显示鬼键槽位 — 点击未绑定的进入绑定，点击已绑定的清除
+        /// </summary>
+        private void DrawGhostKeyChangeSection()
+        {
+            GUILayout.BeginVertical("box");
+            KeyCode[] ghostKeyCodes = GetGhostKeyCode();
+
+            GUILayout.Label(I18n.Tr("row1_keys") + ":");
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < 8; i++)
+                DrawGhostKeyButton(i, ghostKeyCodes);
+            GUILayout.EndHorizontal();
+
+            byte[] backSequence = GetBackSequence();
+            if (backSequence.Length > 0)
+            {
+                GUILayout.Label(I18n.Tr("row2_keys") + ":");
+                GUILayout.BeginHorizontal();
+                for (int i = 0; i < backSequence.Length && i < 8; i++)
+                    DrawGhostKeyButton(backSequence[i], ghostKeyCodes);
+                GUILayout.EndHorizontal();
+            }
+
+            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
+            {
+                GUILayout.Label(I18n.Tr("row3_keys") + ":");
+                GUILayout.BeginHorizontal();
+                for (int i = 16; i < 20; i++)
+                    DrawGhostKeyButton(i, ghostKeyCodes);
+                GUILayout.EndHorizontal();
+            }
+
+            if (SelectedKey != -1 && changeState == 2)
+                GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>");
+            GUILayout.EndVertical();
+        }
+
+        private void DrawGhostKeyButton(int i, KeyCode[] ghostKeyCodes)
+        {
+            bool isBound = ghostKeyCodes[i] != KeyCode.None;
+            string label = isBound ? KeyToString(ghostKeyCodes[i]) : "-";
+            bool selected = i == SelectedKey && changeState == 2;
+            if (GUILayout.Button(selected ? "<b>" + label + "</b>" : label))
+            {
+                if (isBound)
+                {
+                    ghostKeyCodes[i] = KeyCode.None;
+                    SelectedKey = -1;
+                    SaveSettings();
+                }
+                else
+                {
+                    SelectedKey = i;
+                    changeState = 2;
+                }
+            }
         }
 
         /// <summary>
@@ -565,7 +644,7 @@ namespace JipperKeyViewer.KeyViewer
                 if (GUILayout.Button(buttonText))
                 {
                     SelectedKey = i;
-                    TextChanged = true;
+                    changeState = 1;
                 }
             }
             GUILayout.EndHorizontal();
@@ -582,7 +661,7 @@ namespace JipperKeyViewer.KeyViewer
                     if (GUILayout.Button(buttonText))
                     {
                         SelectedKey = keyIndex;
-                        TextChanged = true;
+                        changeState = 1;
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -600,7 +679,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(buttonText))
                         {
                             SelectedKey = i;
-                            TextChanged = true;
+                            changeState = 1;
                         }
                     }
                 }
@@ -622,7 +701,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(buttonText))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = true;
+                            changeState = 1;
                         }
                     }
                     GUILayout.EndHorizontal();
@@ -636,7 +715,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(buttonText))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = true;
+                            changeState = 1;
                         }
                     }
                     GUILayout.EndHorizontal();
@@ -650,7 +729,7 @@ namespace JipperKeyViewer.KeyViewer
                         if (GUILayout.Button(buttonText))
                         {
                             SelectedKey = i + 20;
-                            TextChanged = true;
+                            changeState = 1;
                         }
                     }
                     for (int s = 0; s < 8 - remaining; s++)
@@ -659,7 +738,7 @@ namespace JipperKeyViewer.KeyViewer
                 }
             }
 
-            if (SelectedKey != -1 && TextChanged)
+            if (SelectedKey != -1 && changeState == 1)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(I18n.Tr("input_text") + ":");

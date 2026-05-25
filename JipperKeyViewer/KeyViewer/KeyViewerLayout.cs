@@ -91,7 +91,14 @@ namespace JipperKeyViewer.KeyViewer
             if (cachedKeyStyle != Settings.KeyViewerStyle)
             {
                 cachedMainKeys = GetKeyCode();
+                cachedGhostKeys = GetGhostKeyCode();
                 cachedKeyStyle = Settings.KeyViewerStyle;
+                ghostKeyStates = new bool[cachedGhostKeys.Length];
+            }
+            else if (cachedGhostKeys == null)
+            {
+                cachedGhostKeys = GetGhostKeyCode();
+                ghostKeyStates = new bool[cachedGhostKeys.Length];
             }
             if (cachedFootStyle != Settings.FootKeyViewerStyle)
             {
@@ -142,7 +149,7 @@ namespace JipperKeyViewer.KeyViewer
                     }
                     else
                     {
-                        if (Settings.EnableRainEffect && Settings.EnableRainFade)
+                        if (Settings.EnableRainEffect)
                             rainSystem.ReleaseRainEffect(idx, key);
                     }
                 }
@@ -163,6 +170,33 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     lastKps = currentKps;
                     if (Kps != null && Kps.value != null) Kps.value.text = currentKps.ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Process ghost key inputs — secondary keys that only trigger rain, no display/count / 处理鬼键输入 — 仅触发雨滴的副按键，无显示/计数
+        /// </summary>
+        private void ProcessGhostKeysInUpdate()
+        {
+            if (!Settings.EnableRainEffect || !Settings.EnableGhostRain) return;
+            if (cachedGhostKeys == null) return;
+
+            for (int i = 0; i < cachedGhostKeys.Length; i++)
+            {
+                if (cachedGhostKeys[i] == KeyCode.None) continue;
+                if (i >= Keys.Length || Keys[i] == null) continue;
+
+                bool current = Input.GetKey(cachedGhostKeys[i]);
+                if (current != (ghostKeyStates != null && i < ghostKeyStates.Length && ghostKeyStates[i]))
+                {
+                    if (ghostKeyStates != null && i < ghostKeyStates.Length)
+                        ghostKeyStates[i] = current;
+
+                    if (current)
+                        rainSystem.TriggerGhostRain(i, Keys[i]);
+                    else
+                        rainSystem.ReleaseGhostRain(i, Keys[i]);
                 }
             }
         }
@@ -922,6 +956,23 @@ namespace JipperKeyViewer.KeyViewer
                 FootKeyviewerStyle.Key14 => Settings.footkey14,
                 FootKeyviewerStyle.Key16 => Settings.footkey16,
                 _ => new KeyCode[0]
+            };
+        }
+
+        /// <summary>
+        /// Get the ghost key code array for the current main layout / 获取当前主布局的鬼键代码数组
+        /// </summary>
+        private static KeyCode[] GetGhostKeyCode()
+        {
+            return Settings.KeyViewerStyle switch
+            {
+                KeyviewerStyle.Key8 => Settings.GhostKey8,
+                KeyviewerStyle.Key10 => Settings.GhostKey10,
+                KeyviewerStyle.Key12 => Settings.GhostKey12,
+                KeyviewerStyle.Key14 => Settings.GhostKey14,
+                KeyviewerStyle.Key16 => Settings.GhostKey16,
+                KeyviewerStyle.Key20 => Settings.GhostKey20,
+                _ => Settings.GhostKey16
             };
         }
 
