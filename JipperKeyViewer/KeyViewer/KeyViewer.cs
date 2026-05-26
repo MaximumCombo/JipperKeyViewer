@@ -71,6 +71,10 @@ namespace JipperKeyViewer.KeyViewer
         Key Total;
         /// <summary>Queue of press timestamps for KPS calculation / 按下时间戳队列，用于 KPS 计算</summary>
         Queue<long> PressTimes;
+        /// <summary>Per-key press timestamp queues for per-key KPS / 每键按下时间戳队列，用于每键 KPS</summary>
+        Queue<long>[] keyPressTimes;
+        /// <summary>Last frame per-key KPS values for change detection / 上一帧每键 KPS 值，用于变化检测</summary>
+        int[] lastPerKeyKps;
         /// <summary>High-resolution stopwatch for timing / 用于计时的高精度秒表</summary>
         Stopwatch Stopwatch;
         /// <summary>Timestamp of last frame for delta calculation / 上一帧的时间戳，用于增量计算</summary>
@@ -262,6 +266,7 @@ namespace JipperKeyViewer.KeyViewer
                 ProcessKeySelection();              // Handle key rebinding input / 处理按键重新绑定输入
                 ProcessMainAndFootKeysInUpdate(now); // Detect key presses / 检测按键按下
                 ProcessKpsInUpdate(now);            // Update KPS counter / 更新 KPS 计数器
+                ProcessPerKeyKpsInUpdate(now);       // Update per-key KPS / 更新每键 KPS
                 ProcessGhostKeysInUpdate();          // Process ghost key inputs / 处理鬼键输入
                 if (Settings.EnableRainEffect) rainSystem.UpdateEffects(Keys); // Update rain drop positions / 更新雨滴位置
             }

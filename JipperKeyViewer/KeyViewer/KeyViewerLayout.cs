@@ -65,6 +65,8 @@ namespace JipperKeyViewer.KeyViewer
             // Persist the overlay across scene loads / 使覆盖层在场景加载中持久化
             Object.DontDestroyOnLoad(KeyViewerObject);
             PressTimes = new Queue<long>();
+            keyPressTimes = new Queue<long>[36];
+            lastPerKeyKps = new int[36];
             Stopwatch = System.Diagnostics.Stopwatch.StartNew();
         }
 
@@ -85,6 +87,8 @@ namespace JipperKeyViewer.KeyViewer
             Canvas = null;
             Keys = null;
             PressTimes = null;
+            keyPressTimes = null;
+            lastPerKeyKps = null;
             Stopwatch = null;
         }
 
@@ -924,14 +928,19 @@ namespace JipperKeyViewer.KeyViewer
             return Settings.EnableCountFormatting ? count.ToString("N0") : count.ToString();
         }
 
-        /// <summary>Refresh all count displays with current formatting setting / 按当前格式设置刷新所有计数显示</summary>
+        /// <summary>Refresh all key value displays (count or per-key KPS) / 刷新所有按键数值显示（计数或每键 KPS）</summary>
         public void RefreshAllCountDisplay()
         {
             if (Keys == null) return;
             for (int i = 0; i < Keys.Length; i++)
             {
                 if (Keys[i] != null && Keys[i].value != null)
-                    Keys[i].value.text = FormatCount(Settings.Count[i]);
+                {
+                    if (Settings.EnablePerKeyKps)
+                        Keys[i].value.text = (keyPressTimes != null && i < keyPressTimes.Length && keyPressTimes[i] != null) ? keyPressTimes[i].Count.ToString() : "0";
+                    else
+                        Keys[i].value.text = FormatCount(Settings.Count[i]);
+                }
             }
             if (Total != null && Total.value != null)
                 Total.value.text = FormatCount(Settings.TotalCount);

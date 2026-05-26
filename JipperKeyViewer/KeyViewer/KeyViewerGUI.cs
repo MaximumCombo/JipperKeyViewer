@@ -55,6 +55,19 @@ namespace JipperKeyViewer.KeyViewer
                 for (int i = 0; i < Settings.Count.Length; i++)
                     Settings.Count[i] = 0;
                 if (PressTimes != null) PressTimes.Clear();
+                if (keyPressTimes != null)
+                {
+                    for (int i = 0; i < keyPressTimes.Length; i++)
+                    {
+                        if (keyPressTimes[i] != null)
+                            keyPressTimes[i].Clear();
+                    }
+                }
+                if (lastPerKeyKps != null)
+                {
+                    for (int i = 0; i < lastPerKeyKps.Length; i++)
+                        lastPerKeyKps[i] = 0;
+                }
                 if (Keys != null)
                 {
                     for (int i = 0; i < Keys.Length; i++)
@@ -307,6 +320,15 @@ namespace JipperKeyViewer.KeyViewer
             {
                 Settings.HideMainKeyCount = newHideCount;
                 ResetKeyViewer();
+                SaveSettings();
+            }
+
+            // Per-key KPS toggle / 每键 KPS 开关
+            bool newPerKeyKps = GUILayout.Toggle(Settings.EnablePerKeyKps, I18n.Tr("per_key_kps"));
+            if (newPerKeyKps != Settings.EnablePerKeyKps)
+            {
+                Settings.EnablePerKeyKps = newPerKeyKps;
+                RefreshAllCountDisplay();
                 SaveSettings();
             }
 
@@ -1093,6 +1115,10 @@ namespace JipperKeyViewer.KeyViewer
                     if (GUILayout.Button(I18n.Tr("reset_counts") + " (" + Settings.Count[s] + ")", redStyle))
                     {
                         Settings.Count[s] = 0;
+                        if (keyPressTimes != null && s < keyPressTimes.Length && keyPressTimes[s] != null)
+                            keyPressTimes[s].Clear();
+                        if (lastPerKeyKps != null && s < lastPerKeyKps.Length)
+                            lastPerKeyKps[s] = 0;
                         if (Keys != null && s < Keys.Length && Keys[s] != null && Keys[s].value != null)
                             Keys[s].value.text = "0";
                         SaveSettings();

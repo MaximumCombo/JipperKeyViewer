@@ -185,9 +185,14 @@ namespace JipperKeyViewer.KeyViewer
                     {
                         countArr[idx]++;
                         Settings.TotalCount++;
-                        if (key.value != null)
+                        if (key.value != null && !Settings.EnablePerKeyKps)
                             key.value.text = FormatCount(countArr[idx]);
                         PressTimes.Enqueue(elapsedMs);
+                        if (keyPressTimes != null && idx < keyPressTimes.Length)
+                        {
+                            if (keyPressTimes[idx] == null) keyPressTimes[idx] = new Queue<long>();
+                            keyPressTimes[idx].Enqueue(elapsedMs);
+                        }
                         if (rainEnabled) rainSystem.TriggerRainEffect(idx, key);
                     }
                     else
@@ -211,6 +216,28 @@ namespace JipperKeyViewer.KeyViewer
             {
                 lastKps = currentKps;
                 if (Kps != null && Kps.value != null) Kps.value.text = currentKps.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Per-key KPS: clean timestamps older than 1s and update display / 每键 KPS：清理超过 1 秒的时间戳并更新显示
+        /// </summary>
+        private void ProcessPerKeyKpsInUpdate(long elapsedMilliseconds)
+        {
+            if (!Settings.EnablePerKeyKps || keyPressTimes == null || Keys == null) return;
+            for (int i = 0; i < Keys.Length && i < keyPressTimes.Length; i++)
+            {
+                var q = keyPressTimes[i];
+                if (q == null) continue;
+                while (q.Count > 0 && elapsedMilliseconds - q.Peek() > 1000)
+                    q.Dequeue();
+                int kps = q.Count;
+                if (lastPerKeyKps != null && i < lastPerKeyKps.Length && lastPerKeyKps[i] != kps)
+                {
+                    lastPerKeyKps[i] = kps;
+                    if (Keys[i] != null && Keys[i].value != null)
+                        Keys[i].value.text = kps.ToString();
+                }
             }
         }
 
