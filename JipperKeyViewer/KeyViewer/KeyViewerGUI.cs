@@ -1,6 +1,7 @@
 // Settings GUI window drawn inside UnityModManager / 在 UnityModManager 内绘制的设置 GUI 窗口
 // All user-facing configuration UI: language, fonts, position, layout, colors, key rebinding, text editing / 所有面向用户的配置 UI：语言、字体、位置、布局、颜色、按键重绑定、文本编辑
 
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
@@ -114,6 +115,23 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.Label($"CustomFont : {Path.Combine(Path.GetDirectoryName(Main.Mod?.Path) ?? ".", "CustomFont")}");
                 GUILayout.EndVertical();
             }
+
+            GUILayout.Space(3);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(I18n.Tr("open_config_folder"), GUILayout.MinWidth(120)))
+            {
+                string dir = Path.GetDirectoryName(ConfigPath);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    System.Diagnostics.Process.Start("explorer.exe", dir);
+            }
+            if (GUILayout.Button(I18n.Tr("open_font_folder"), GUILayout.MinWidth(120)))
+            {
+                string modPath = Path.GetDirectoryName(Main.Mod?.Path) ?? ".";
+                string customFontDir = Path.Combine(modPath, "CustomFont");
+                if (!Directory.Exists(customFontDir)) Directory.CreateDirectory(customFontDir);
+                System.Diagnostics.Process.Start("explorer.exe", customFontDir);
+            }
+            GUILayout.EndHorizontal();
 
             // DownLocation toggle (place below) / 下移位置开关
             bool newDownLocation = GUILayout.Toggle(Settings.DownLocation, I18n.Tr("place_below"));
@@ -289,6 +307,16 @@ namespace JipperKeyViewer.KeyViewer
             {
                 Settings.HideMainKeyCount = newHideCount;
                 ResetKeyViewer();
+                SaveSettings();
+            }
+
+            // Streamer Mode toggle / 流媒体模式开关
+            bool newStreamer = GUILayout.Toggle(Settings.StreamerMode, I18n.Tr("streamer_mode"));
+            if (newStreamer != Settings.StreamerMode)
+            {
+                Settings.StreamerMode = newStreamer;
+                if (Kps != null) Kps.gameObject.SetActive(!newStreamer);
+                if (Total != null) Total.gameObject.SetActive(!newStreamer);
                 SaveSettings();
             }
 

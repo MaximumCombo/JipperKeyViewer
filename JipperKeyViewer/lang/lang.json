@@ -55,6 +55,9 @@
     { "key": "per_key_colors", "en": "Per-Key Colors", "zh": "每键独立颜色", "ko": "키별 색상" },
     { "key": "per_key_color_reset", "en": "Reset All to Default", "zh": "全部重置为默认", "ko": "모두 기본값으로 초기화" },
     { "key": "auto_rainbow", "en": "Auto Rainbow KV", "zh": "自动彩色KV", "ko": "자동 무지개 KV" },
-    { "key": "foot_keys_text", "en": "Foot Key Text", "zh": "脚键文本", "ko": "발판 키 텍스트" }
+    { "key": "foot_keys_text", "en": "Foot Key Text", "zh": "脚键文本", "ko": "발판 키 텍스트" },
+    { "key": "streamer_mode", "en": "Hide KPS/Total", "zh": "隐藏KPS/总计数", "ko": "KPS/총계 숨기기" },
+    { "key": "open_config_folder", "en": "Open Config Folder", "zh": "打开配置文件夹", "ko": "설정 폴더 열기" },
+    { "key": "open_font_folder", "en": "Open Font Folder", "zh": "打开字体文件夹", "ko": "글꼴 폴더 열기" },
   ]
 }

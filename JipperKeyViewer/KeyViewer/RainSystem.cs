@@ -212,20 +212,20 @@ namespace JipperKeyViewer.KeyViewer
             };
         }
 
-        public Rain GetRainFromPool(Transform parent, Sprite tiledSprite = null)
+        public Rain GetRainFromPool(Transform parent, Sprite sprite = null, bool isTiled = false)
         {
             Rain r;
             if (rainPool.Count > 0)
             {
                 r = rainPool.Pop();
-                r.Init(parent, tiledSprite);
+                r.Init(parent, sprite, isTiled);
             }
             else
             {
                 GameObject go = new GameObject("Rain");
                 go.AddComponent<RectTransform>();
                 r = go.AddComponent<Rain>();
-                r.Init(parent, tiledSprite);
+                r.Init(parent, sprite, isTiled);
             }
             return r;
         }
@@ -241,13 +241,12 @@ namespace JipperKeyViewer.KeyViewer
                 Object.Destroy(r.gameObject);
         }
 
-        private RawRain GetRawRain(Transform transform, byte color)
+        private RawRain GetRawRain(byte color)
         {
             RawRain r;
             if (rawRainPool.Count > 0)
             {
                 r = rawRainPool.Pop();
-                r.transform = transform;
                 r.color = color;
                 r.removed = false;
                 r.elapsedMs = 0f;
@@ -260,7 +259,7 @@ namespace JipperKeyViewer.KeyViewer
             }
             else
             {
-                r = new RawRain(transform, color);
+                r = new RawRain(color);
             }
             return r;
         }
@@ -268,7 +267,6 @@ namespace JipperKeyViewer.KeyViewer
         public void ReturnRawRain(RawRain r)
         {
             if (rawRainPool.Count >= MAX_RAWRAIN_POOL_SIZE) return;
-            r.transform = null;
             r.removed = false;
             r.sizeDelta = null;
             r.anchoredPosition = null;
@@ -282,9 +280,10 @@ namespace JipperKeyViewer.KeyViewer
         {
             if (key == null || key.rain == null) return;
 
-            Sprite tiledSprite = isGhost ? GhostRainSprite : null;
-            RawRain rawRain = GetRawRain(key.rain.transform, key.color);
-            Rain rainComponent = GetRainFromPool(key.rain.transform, tiledSprite);
+            Sprite rainSprite = isGhost ? GhostRainSprite : null;
+            bool isTiled = isGhost;
+            RawRain rawRain = GetRawRain(key.color);
+            Rain rainComponent = GetRainFromPool(key.rain.transform, rainSprite, isTiled);
             rainComponent.rawRain = rawRain;
             rawRain.rainComponent = rainComponent;
             rawRain.isGhost = isGhost;

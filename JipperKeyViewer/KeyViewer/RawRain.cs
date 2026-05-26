@@ -4,7 +4,6 @@ namespace JipperKeyViewer.KeyViewer
 {
     public class RawRain
     {
-        public Transform transform;
         public float elapsedMs;
         public byte color;
         public Vector2 FinalSize;
@@ -15,9 +14,8 @@ namespace JipperKeyViewer.KeyViewer
         public bool growing;
         public Rain rainComponent;
 
-        public RawRain(Transform transform, byte color)
+        public RawRain(byte color)
         {
-            this.transform = transform;
             this.color = color;
             elapsedMs = 0f;
         }

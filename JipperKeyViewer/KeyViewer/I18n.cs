@@ -77,6 +77,9 @@ namespace JipperKeyViewer.KeyViewer
             ["per_key_colors"] = "Per-Key Colors",
             ["per_key_color_reset"] = "Reset All to Default",
             ["auto_rainbow"] = "Auto Rainbow KV",
+            ["streamer_mode"] = "Hide KPS/Total",
+            ["open_config_folder"] = "Open Config Folder",
+            ["open_font_folder"] = "Open Font Folder",
         };
 
         /// <summary>Chinese translations dictionary / 中文字典</summary>
@@ -139,6 +142,9 @@ namespace JipperKeyViewer.KeyViewer
             ["per_key_colors"] = "每键独立颜色",
             ["per_key_color_reset"] = "全部重置为默认",
             ["auto_rainbow"] = "自动彩色KV",
+            ["streamer_mode"] = "隐藏KPS/总计数",
+            ["open_config_folder"] = "打开配置文件夹",
+            ["open_font_folder"] = "打开字体文件夹",
         };
 
         /// <summary>Korean translations dictionary / 韩文字典</summary>
@@ -201,6 +207,9 @@ namespace JipperKeyViewer.KeyViewer
             ["per_key_colors"] = "키별 색상",
             ["per_key_color_reset"] = "모두 기본값으로 초기화",
             ["auto_rainbow"] = "자동 무지개 KV",
+            ["streamer_mode"] = "KPS/총계 숨기기",
+            ["open_config_folder"] = "설정 폴더 열기",
+            ["open_font_folder"] = "글꼴 폴더 열기",
         };
 
         /// <summary>Path to the lang.json override file / lang.json 覆盖文件路径</summary>
@@ -236,7 +245,7 @@ namespace JipperKeyViewer.KeyViewer
             string path = FilePath;
             if (!File.Exists(path))
             {
-                Debug.Log($"I18n: no lang.json at {path}, using defaults");
+                Main.Mod.Logger.Log($"I18n: no lang.json at {path}, using defaults");
                 return;
             }
 
@@ -246,7 +255,7 @@ namespace JipperKeyViewer.KeyViewer
                 var langFile = JsonUtility.FromJson<LangFile>(json);
                 if (langFile?.entries == null)
                 {
-                    Debug.LogError("I18n: lang.json has no entries array");
+                    Main.Mod.Logger.Error("I18n: lang.json has no entries array");
                     return;
                 }
                 int count = 0;
@@ -258,11 +267,11 @@ namespace JipperKeyViewer.KeyViewer
                     if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
                     count++;
                 }
-                Debug.Log($"I18n: loaded {count} entries from lang.json");
+                Main.Mod.Logger.Log($"I18n: loaded {count} entries from lang.json");
             }
             catch (Exception e)
             {
-                Debug.LogError($"I18n: failed to parse lang.json: {e.Message}");
+                Main.Mod.Logger.Error($"I18n: failed to parse lang.json: {e.Message}");
             }
         }
 

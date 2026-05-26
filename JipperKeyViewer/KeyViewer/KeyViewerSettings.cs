@@ -140,6 +140,8 @@ namespace JipperKeyViewer.KeyViewer
         public bool EnableCountFormatting = false;
         /// <summary>Hide press count on main keys / 隐藏主按键计数</summary>
         public bool HideMainKeyCount = false;
+        /// <summary>Streamer mode — hide KPS and Total displays / 流媒体模式 — 隐藏 KPS 和 Total 显示</summary>
+        public bool StreamerMode = false;
 
         /// <summary>Per-key independent colors / 每键独立颜色</summary>
         public bool EnablePerKeyColors = false;

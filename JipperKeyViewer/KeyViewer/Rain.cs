@@ -18,7 +18,7 @@ namespace JipperKeyViewer.KeyViewer
             image.raycastTarget = false;
         }
 
-        public void Init(Transform parent, Sprite tiledSprite = null)
+        public void Init(Transform parent, Sprite sprite = null, bool isTiled = false)
         {
             gameObject.SetActive(true);
             transform.SetParent(parent);
@@ -28,10 +28,10 @@ namespace JipperKeyViewer.KeyViewer
             transform.localScale = Vector3.one;
             fadingOut = false;
             fadeTimer = 0f;
-            if (tiledSprite != null)
+            if (sprite != null)
             {
-                image.sprite = tiledSprite;
-                image.type = Image.Type.Tiled;
+                image.sprite = sprite;
+                image.type = isTiled ? Image.Type.Tiled : Image.Type.Simple;
             }
             else
             {

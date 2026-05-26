@@ -56,6 +56,12 @@ namespace JipperKeyViewer.KeyViewer
                 case FootKeyviewerStyle.Key14: InitializeFootKeyViewer(14); break;
                 case FootKeyviewerStyle.Key16: InitializeFootKeyViewer(16); break;
             }
+            // Apply streamer mode (hide KPS/Total)
+            if (Settings.StreamerMode)
+            {
+                if (Kps != null) Kps.gameObject.SetActive(false);
+                if (Total != null) Total.gameObject.SetActive(false);
+            }
             // Persist the overlay across scene loads / 使覆盖层在场景加载中持久化
             Object.DontDestroyOnLoad(KeyViewerObject);
             PressTimes = new Queue<long>();
@@ -731,6 +737,11 @@ namespace JipperKeyViewer.KeyViewer
             }
             rainSystem.ClearPool();
             InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
+            if (Settings.StreamerMode)
+            {
+                if (Kps != null) Kps.gameObject.SetActive(false);
+                if (Total != null) Total.gameObject.SetActive(false);
+            }
             if (Settings.CustomPositionEnabled)
                 ResetKeyViewerPosition();
         }
