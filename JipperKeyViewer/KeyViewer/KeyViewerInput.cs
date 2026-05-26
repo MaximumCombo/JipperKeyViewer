@@ -18,6 +18,8 @@ namespace JipperKeyViewer.KeyViewer
         private readonly List<AsyncInputManager.KeyEvent> _inputEvents = new List<AsyncInputManager.KeyEvent>(64);
         /// <summary>VK code → key index (0-19 main, 20-35 foot) lookup for O(1) event routing</summary>
         private Dictionary<int, int> _vkToKeyIndex;
+        /// <summary>VK code → ghost key index for event-driven ghost key processing</summary>
+        private Dictionary<int, int> _ghostVKToIndex;
         /// <summary>Virtual key codes currently tracked by the async input manager</summary>
         private int[] _trackedVKs;
 
@@ -56,6 +58,7 @@ namespace JipperKeyViewer.KeyViewer
                 }
                 SelectedKey = -1;
                 SaveSettings();
+                InitAsyncInput();
                 return;
             }
             KeyCode[] keyCodes = GetKeyCode();
@@ -92,6 +95,7 @@ namespace JipperKeyViewer.KeyViewer
             }
             SelectedKey = -1;
             SaveSettings();
+            InitAsyncInput();
         }
 
         static readonly Dictionary<KeyCode, string> KeyDisplayNames = new Dictionary<KeyCode, string>();
@@ -149,14 +153,18 @@ namespace JipperKeyViewer.KeyViewer
             _asyncInput?.Dispose();
             _asyncInput = null;
             _vkToKeyIndex = null;
+            _ghostVKToIndex = null;
 
             var mainKeys = GetKeyCode();
             var footKeys = GetFootKeyCode();
+            var ghostKeys = GetGhostKeyCode();
             int mainLen = mainKeys?.Length ?? 0;
             int footLen = footKeys?.Length ?? 0;
+            int ghostLen = ghostKeys?.Length ?? 0;
 
-            var vks = new List<int>(mainLen + footLen);
+            var vks = new List<int>(mainLen + footLen + ghostLen);
             _vkToKeyIndex = new Dictionary<int, int>(mainLen + footLen);
+            _ghostVKToIndex = new Dictionary<int, int>(ghostLen);
 
             if (mainKeys != null)
             {
@@ -177,6 +185,17 @@ namespace JipperKeyViewer.KeyViewer
                     {
                         vks.Add(vk);
                         _vkToKeyIndex[vk] = i + 20;
+                    }
+                }
+            }
+            if (ghostKeys != null)
+            {
+                for (int i = 0; i < ghostKeys.Length; i++)
+                {
+                    if (ghostKeys[i] != KeyCode.None && AsyncInputManager.KeyCodeToVK.TryGetValue(ghostKeys[i], out int vk))
+                    {
+                        vks.Add(vk);
+                        _ghostVKToIndex[vk] = i;
                     }
                 }
             }
@@ -296,32 +315,31 @@ namespace JipperKeyViewer.KeyViewer
         }
 
         /// <summary>
-        /// Process ghost key inputs using async events.
+        /// Process ghost key inputs using async events from the same queue.
         /// Ghost keys only trigger rain, no display or count.
         /// </summary>
         private void ProcessGhostKeysInUpdate()
         {
-            if (cachedGhostKeys == null) return;
+            if (cachedGhostKeys == null || _ghostVKToIndex == null) return;
             bool rainEnabled = Settings.EnableRainEffect;
             bool ghostRainEnabled = Settings.EnableGhostRain;
             if (!rainEnabled || !ghostRainEnabled) return;
 
-            // Check ghost keys using GetAsyncKeyState (instant, not frame-dependent)
-            KeyCode[] ghosts = cachedGhostKeys;
-            for (int i = 0; i < ghosts.Length; i++)
+            // Process ghost key events from the same queue (already drained by ProcessMainAndFootKeysInUpdate)
+            for (int e = 0; e < _inputEvents.Count; e++)
             {
-                if (ghosts[i] == KeyCode.None) continue;
-                if (!AsyncInputManager.KeyCodeToVK.TryGetValue(ghosts[i], out int vk)) continue;
+                var evt = _inputEvents[e];
+                if (!_ghostVKToIndex.TryGetValue(evt.VKey, out int gi)) continue;
+                if (gi >= ghostKeyStates.Length || gi >= Keys.Length) continue;
 
-                bool current = AsyncInputManager.IsKeyDown(vk);
-                if (current != ghostKeyStates[i])
-                {
-                    ghostKeyStates[i] = current;
-                    if (current)
-                        rainSystem.TriggerGhostRain(i, Keys[i]);
-                    else
-                        rainSystem.ReleaseGhostRain(i, Keys[i]);
-                }
+                bool current = evt.Pressed;
+                if (current == ghostKeyStates[gi]) continue;
+
+                ghostKeyStates[gi] = current;
+                if (current)
+                    rainSystem.TriggerGhostRain(gi, Keys[gi]);
+                else
+                    rainSystem.ReleaseGhostRain(gi, Keys[gi]);
             }
         }
 

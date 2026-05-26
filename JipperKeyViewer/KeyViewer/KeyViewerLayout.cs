@@ -81,6 +81,7 @@ namespace JipperKeyViewer.KeyViewer
             _asyncInput?.Dispose();
             _asyncInput = null;
             _vkToKeyIndex = null;
+            _ghostVKToIndex = null;
             Object.Destroy(KeyViewerObject);
             KeyViewerObject = null;
             KeyViewerSizeObject = null;
