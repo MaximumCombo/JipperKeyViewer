@@ -390,16 +390,9 @@ namespace JipperKeyViewer.KeyViewer
             {
                 Settings.EnableKeyBlocker = newKeyBlocker;
                 if (Settings.EnableKeyBlocker)
-                {
-                    // Try to initialize/connect to KeyBlocker when enabled
                     KeyViewer.instance?.InitializeKeyBlockerPipe();
-                    KeyViewer.instance?.SendCurrentKeyAllowlist();
-                }
                 else
-                {
-                    // Cleanup when disabled
                     KeyViewer.instance?.CleanupKeyBlockerPipe();
-                }
                 SaveSettings();
             }
 
@@ -584,11 +577,10 @@ namespace JipperKeyViewer.KeyViewer
             GUILayout.BeginHorizontal();
             for (int i = 0; i < 8; i++)
             {
-                if (GUILayout.Button(KeyToString(keyCodes[i])))
-                {
-                    SelectedKey = i;
-                    changeState = 0;
-                }
+                bool sel = SelectedKey == i && changeState == 0;
+                if (GUILayout.Button(sel ? "<b>" + KeyToString(keyCodes[i]) + "</b>" : KeyToString(keyCodes[i])))
+                    SelectedKey = sel ? -1 : i;
+                if (!sel && SelectedKey == i) changeState = 0;
             }
             GUILayout.EndHorizontal();
 
@@ -599,11 +591,11 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.BeginHorizontal();
                 for (int i = 0; i < backSequence.Length && i < 8; i++)
                 {
-                    if (GUILayout.Button(KeyToString(keyCodes[backSequence[i]])))
-                    {
-                        SelectedKey = backSequence[i];
-                        changeState = 0;
-                    }
+                    int ki = backSequence[i];
+                    bool sel = SelectedKey == ki && changeState == 0;
+                    if (GUILayout.Button(sel ? "<b>" + KeyToString(keyCodes[ki]) + "</b>" : KeyToString(keyCodes[ki])))
+                        SelectedKey = sel ? -1 : ki;
+                    if (!sel && SelectedKey == ki) changeState = 0;
                 }
                 GUILayout.EndHorizontal();
             }
@@ -616,11 +608,10 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     if (i < keyCodes.Length)
                     {
-                        if (GUILayout.Button(KeyToString(keyCodes[i])))
-                        {
-                            SelectedKey = i;
-                            changeState = 0;
-                        }
+                        bool sel = SelectedKey == i && changeState == 0;
+                        if (GUILayout.Button(sel ? "<b>" + KeyToString(keyCodes[i]) + "</b>" : KeyToString(keyCodes[i])))
+                            SelectedKey = sel ? -1 : i;
+                        if (!sel && SelectedKey == i) changeState = 0;
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -636,11 +627,11 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.BeginHorizontal();
                     for (int i = 0; i < footKeyCodes.Length; i++)
                     {
-                        if (GUILayout.Button(KeyToString(footKeyCodes[i])))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 0;
-                        }
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 0;
+                        if (GUILayout.Button(sel ? "<b>" + KeyToString(footKeyCodes[i]) + "</b>" : KeyToString(footKeyCodes[i])))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 0;
                     }
                     GUILayout.EndHorizontal();
                 }
@@ -649,11 +640,11 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.BeginHorizontal();
                     for (int i = 0; i < 8; i++)
                     {
-                        if (GUILayout.Button(KeyToString(footKeyCodes[i])))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 0;
-                        }
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 0;
+                        if (GUILayout.Button(sel ? "<b>" + KeyToString(footKeyCodes[i]) + "</b>" : KeyToString(footKeyCodes[i])))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 0;
                     }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
@@ -662,11 +653,11 @@ namespace JipperKeyViewer.KeyViewer
                         GUILayout.FlexibleSpace();
                     for (int i = 8; i < footKeyCodes.Length; i++)
                     {
-                        if (GUILayout.Button(KeyToString(footKeyCodes[i])))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 0;
-                        }
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 0;
+                        if (GUILayout.Button(sel ? "<b>" + KeyToString(footKeyCodes[i]) + "</b>" : KeyToString(footKeyCodes[i])))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 0;
                     }
                     for (int s = 0; s < 8 - remaining; s++)
                         GUILayout.FlexibleSpace();
@@ -675,7 +666,7 @@ namespace JipperKeyViewer.KeyViewer
             }
 
             if (SelectedKey != -1 && changeState == 0)
-                GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>");
+                GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>  (Esc " + I18n.Tr("cancel") + ")");
             GUILayout.EndVertical();
         }
 
@@ -714,7 +705,7 @@ namespace JipperKeyViewer.KeyViewer
             }
 
             if (SelectedKey != -1 && changeState == 2)
-                GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>");
+                GUILayout.Label("<b>" + I18n.Tr("press_new_key") + "</b>  (Esc " + I18n.Tr("cancel") + ")");
             GUILayout.EndVertical();
         }
 
@@ -723,9 +714,15 @@ namespace JipperKeyViewer.KeyViewer
             bool isBound = ghostKeyCodes[i] != KeyCode.None;
             string label = isBound ? KeyToString(ghostKeyCodes[i]) : "-";
             bool selected = i == SelectedKey && changeState == 2;
-            if (GUILayout.Button(selected ? "<b>" + label + "</b>" : label))
+            if (selected) label = "<b>" + label + "</b>";
+            if (GUILayout.Button(label))
             {
-                if (isBound)
+                if (selected)
+                {
+                    // Cancel rebinding
+                    SelectedKey = -1;
+                }
+                else if (isBound)
                 {
                     ghostKeyCodes[i] = KeyCode.None;
                     SelectedKey = -1;
@@ -753,12 +750,12 @@ namespace JipperKeyViewer.KeyViewer
             GUILayout.BeginHorizontal();
             for (int i = 0; i < 8; i++)
             {
-                string buttonText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
-                if (GUILayout.Button(buttonText))
-                {
-                    SelectedKey = i;
-                    changeState = 1;
-                }
+                string btnText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
+                bool sel = SelectedKey == i && changeState == 1;
+                if (sel) btnText = "<b>" + btnText + "</b>";
+                if (GUILayout.Button(btnText))
+                    SelectedKey = sel ? -1 : i;
+                if (!sel && SelectedKey == i) changeState = 1;
             }
             GUILayout.EndHorizontal();
 
@@ -770,12 +767,12 @@ namespace JipperKeyViewer.KeyViewer
                 for (int i = 0; i < backSequence.Length && i < 8; i++)
                 {
                     int keyIndex = backSequence[i];
-                    string buttonText = !string.IsNullOrEmpty(keyTexts[keyIndex]) ? keyTexts[keyIndex] : KeyToString(keyCodes[keyIndex]);
-                    if (GUILayout.Button(buttonText))
-                    {
-                        SelectedKey = keyIndex;
-                        changeState = 1;
-                    }
+                    string btnText = !string.IsNullOrEmpty(keyTexts[keyIndex]) ? keyTexts[keyIndex] : KeyToString(keyCodes[keyIndex]);
+                    bool sel = SelectedKey == keyIndex && changeState == 1;
+                    if (sel) btnText = "<b>" + btnText + "</b>";
+                    if (GUILayout.Button(btnText))
+                        SelectedKey = sel ? -1 : keyIndex;
+                    if (!sel && SelectedKey == keyIndex) changeState = 1;
                 }
                 GUILayout.EndHorizontal();
             }
@@ -788,12 +785,12 @@ namespace JipperKeyViewer.KeyViewer
                 {
                     if (i < keyTexts.Length)
                     {
-                        string buttonText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
-                        if (GUILayout.Button(buttonText))
-                        {
-                            SelectedKey = i;
-                            changeState = 1;
-                        }
+                        string btnText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
+                        bool sel = SelectedKey == i && changeState == 1;
+                        if (sel) btnText = "<b>" + btnText + "</b>";
+                        if (GUILayout.Button(btnText))
+                            SelectedKey = sel ? -1 : i;
+                        if (!sel && SelectedKey == i) changeState = 1;
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -810,12 +807,13 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.BeginHorizontal();
                     for (int i = 0; i < footKeyCodes.Length; i++)
                     {
-                        string buttonText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
-                        if (GUILayout.Button(buttonText))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 1;
-                        }
+                        string btnText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 1;
+                        if (sel) btnText = "<b>" + btnText + "</b>";
+                        if (GUILayout.Button(btnText))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 1;
                     }
                     GUILayout.EndHorizontal();
                 }
@@ -824,12 +822,13 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.BeginHorizontal();
                     for (int i = 0; i < 8; i++)
                     {
-                        string buttonText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
-                        if (GUILayout.Button(buttonText))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 1;
-                        }
+                        string btnText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 1;
+                        if (sel) btnText = "<b>" + btnText + "</b>";
+                        if (GUILayout.Button(btnText))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 1;
                     }
                     GUILayout.EndHorizontal();
                     GUILayout.BeginHorizontal();
@@ -838,12 +837,13 @@ namespace JipperKeyViewer.KeyViewer
                         GUILayout.FlexibleSpace();
                     for (int i = 8; i < footKeyCodes.Length; i++)
                     {
-                        string buttonText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
-                        if (GUILayout.Button(buttonText))
-                        {
-                            SelectedKey = i + 20;
-                            changeState = 1;
-                        }
+                        string btnText = !string.IsNullOrEmpty(footKeyTexts[i]) ? footKeyTexts[i] : KeyToString(footKeyCodes[i]);
+                        int fi = i + 20;
+                        bool sel = SelectedKey == fi && changeState == 1;
+                        if (sel) btnText = "<b>" + btnText + "</b>";
+                        if (GUILayout.Button(btnText))
+                            SelectedKey = sel ? -1 : fi;
+                        if (!sel && SelectedKey == fi) changeState = 1;
                     }
                     for (int s = 0; s < 8 - remaining; s++)
                         GUILayout.FlexibleSpace();

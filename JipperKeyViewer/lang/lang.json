@@ -27,6 +27,7 @@
     { "key": "row3_keys", "en": "Row 3 Keys", "zh": "第3排按键", "ko": "3열 키" },
     { "key": "foot_keys_list", "en": "Foot Keys", "zh": "脚键", "ko": "발판 키" },
     { "key": "press_new_key", "en": "Press a new key...", "zh": "请按下新的按键...", "ko": "새 키를 누르세요..." },
+    { "key": "cancel", "en": "Cancel", "zh": "取消", "ko": "취소" },
     { "key": "row1_text", "en": "Row 1 Text", "zh": "第1排按键文本", "ko": "1열 텍스트" },
     { "key": "row2_text", "en": "Row 2 Text", "zh": "第2排按键文本", "ko": "2열 텍스트" },
     { "key": "row3_text", "en": "Row 3 Text", "zh": "第3排按键文本", "ko": "3열 텍스트" },

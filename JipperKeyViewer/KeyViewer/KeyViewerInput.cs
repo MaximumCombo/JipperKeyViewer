@@ -20,6 +20,13 @@ namespace JipperKeyViewer.KeyViewer
             if (SelectedKey == -1 || changeState == 1 || !Application.isFocused) return;
             if (!Input.anyKeyDown) return;
 
+            // Escape cancels rebinding
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                SelectedKey = -1;
+                return;
+            }
+
             foreach (KeyCode keyCode in AllKeyCodes)
             {
                 if (Input.GetKeyDown(keyCode))
@@ -46,6 +53,7 @@ namespace JipperKeyViewer.KeyViewer
                 }
                 SelectedKey = -1;
                 SaveSettings();
+                SendCurrentKeyAllowlist();
                 return;
             }
             KeyCode[] keyCodes = GetKeyCode();
@@ -82,6 +90,7 @@ namespace JipperKeyViewer.KeyViewer
             }
             SelectedKey = -1;
             SaveSettings();
+            SendCurrentKeyAllowlist();
         }
 
         static readonly Dictionary<KeyCode, string> KeyDisplayNames = new Dictionary<KeyCode, string>();

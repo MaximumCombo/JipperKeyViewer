@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -148,10 +149,12 @@ namespace JipperKeyViewer.KeyViewer
         private bool fontRestored;
 
         // KeyBlocker integration: named pipe client for sending key allowlist to native blocker
+        // All pipe operations are dispatched to the main thread via UnityEngineMainThread.Enqueue()
+        // to avoid cross-thread access. Background threads only handle blocking Connect().
         private System.IO.Pipes.NamedPipeClientStream _keyBlockerPipe;
-        private System.Threading.Tasks.Task _pipeReaderTask;
-        private System.Threading.CancellationTokenSource _pipeCancellationSource;
         private System.Diagnostics.Process _keyBlockerProcess;
+        private Coroutine _keyBlockerHeartbeat;
+        private volatile bool _keyBlockerCancelConnect;
 
         // ======================== Unity Lifecycle / Unity 生命周期 ========================
 
@@ -276,6 +279,7 @@ namespace JipperKeyViewer.KeyViewer
             if (KeyViewerObject != null && enabled)
             {
                 long now = Stopwatch.ElapsedMilliseconds;
+                UnityEngineMainThread.Drain();               // Execute queued background-thread actions on main thread
                 ProcessKeySelection();              // Handle key rebinding input / 处理按键重新绑定输入
                 ProcessMainAndFootKeysInUpdate(now); // Detect key presses / 检测按键按下
                 ProcessKpsInUpdate(now);            // Update KPS counter / 更新 KPS 计数器
@@ -356,8 +360,6 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
 
-        /// <summary>
-        /// Save current settings to JSON file / 将当前设置保存到 JSON 文件
         // Key code mapping from Unity KeyCode to Windows Virtual-Key codes
         private static readonly Dictionary<KeyCode, ushort> KeyCodeToVK = new Dictionary<KeyCode, ushort>
         {
@@ -381,7 +383,7 @@ namespace JipperKeyViewer.KeyViewer
             [KeyCode.Keypad3] = 0x63, [KeyCode.Keypad4] = 0x64, [KeyCode.Keypad5] = 0x65,
             [KeyCode.Keypad6] = 0x66, [KeyCode.Keypad7] = 0x67, [KeyCode.Keypad8] = 0x68,
             [KeyCode.Keypad9] = 0x69, [KeyCode.KeypadPeriod] = 0x6E, [KeyCode.KeypadDivide] = 0x6F,
-            [KeyCode.KeypadMultiply] = 0x37, [KeyCode.KeypadMinus] = 0x6A, [KeyCode.KeypadPlus] = 0x6B,
+            [KeyCode.KeypadMultiply] = 0x6A, [KeyCode.KeypadMinus] = 0x6D, [KeyCode.KeypadPlus] = 0x6B,
             [KeyCode.KeypadEnter] = 0x0D,
 
             // Function keys
@@ -419,219 +421,196 @@ namespace JipperKeyViewer.KeyViewer
         };
 
         /// <summary>
-        /// Initialize the named pipe client to communicate with KeyBlocker native process
-        /// Attempts to connect to existing process, or starts a new one if needed
+        /// Initialize the named pipe client to communicate with KeyBlocker native process.
+        /// Runs connection attempts on a background thread to avoid blocking Unity's main thread.
+        /// After connection, all pipe operations are dispatched to the main thread.
         /// </summary>
         private void InitializeKeyBlockerPipe()
         {
-            // First try to connect to existing process
-            try
+            if (!Settings.EnableKeyBlocker) return;
+            _keyBlockerCancelConnect = false;
+            System.Threading.ThreadPool.QueueUserWorkItem(_ => ConnectKeyBlockerPipe());
+        }
+
+        /// <summary>
+        /// Background connection logic: try existing process first, then attempt to start KeyBlocker.exe.
+        /// Only handles blocking Connect() calls. All pipe I/O is dispatched to the main thread.
+        /// </summary>
+        private void ConnectKeyBlockerPipe()
+        {
+            // Try to connect to existing KeyBlocker process
+            if (TryConnectPipe(1000))
             {
-                _keyBlockerPipe = new System.IO.Pipes.NamedPipeClientStream(
-                    ".",
-                    "JipperKeyBlocker",
-                    System.IO.Pipes.PipeDirection.Out,
-                    System.IO.Pipes.PipeOptions.Asynchronous);
-
-                _keyBlockerPipe.Connect(1000); // 1 second timeout
-
-                if (_keyBlockerPipe.IsConnected)
-                {
-                    _pipeCancellationSource = new System.Threading.CancellationTokenSource();
-                    _pipeReaderTask = System.Threading.Tasks.Task.Run(() => PipeReaderLoop(_pipeCancellationSource.Token));
-
-                    // Send current layout immediately
-                    SendCurrentKeyAllowlist();
-
-                    Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker pipe");
-                    return;
-                }
-            }
-            catch (System.IO.IOException)
-            {
-                // Pipe not available, we'll try to start our own process
-                Main.Mod.Logger.Log("KeyViewer: KeyBlocker pipe not available, attempting to start KeyBlocker.exe");
-            }
-            catch (Exception e)
-            {
-                Main.Mod.Logger.Error($"KeyViewer: Failed to initialize KeyBlocker pipe: {e.Message}");
+                UnityEngineMainThread.Enqueue(OnPipeConnected);
+                Main.Mod.Logger.Log("KeyViewer: Connected to existing KeyBlocker");
+                return;
             }
 
-            // If we get here, try to start KeyBlocker.exe ourselves
+            // No existing process found, try to start KeyBlocker.exe
             try
             {
                 string modPath = Path.GetDirectoryName(Main.Mod?.Path);
                 string keyBlockerPath = Path.Combine(modPath ?? ".", "KeyBlocker", "KeyBlocker.exe");
 
-                if (File.Exists(keyBlockerPath))
-                {
-                    Main.Mod.Logger.Log($"KeyViewer: Starting KeyBlocker.exe from {keyBlockerPath}");
-                    _keyBlockerProcess = new System.Diagnostics.Process
-                    {
-                        StartInfo = new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = keyBlockerPath,
-                            UseShellExecute = false,
-                            CreateNoWindow = true, // Don't show console window
-                            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
-                        }
-                    };
-                    _keyBlockerProcess.Start();
-
-                    // Give it a moment to start up and create the pipe
-                    System.Threading.Thread.Sleep(500);
-
-                    // Now try to connect to the pipe
-                    _keyBlockerPipe = new System.IO.Pipes.NamedPipeClientStream(
-                        ".",
-                        "JipperKeyBlocker",
-                        System.IO.Pipes.PipeDirection.Out,
-                        System.IO.Pipes.PipeOptions.Asynchronous);
-
-                    _keyBlockerPipe.Connect(2000); // 2 second timeout for started process
-
-                    if (_keyBlockerPipe.IsConnected)
-                    {
-                        _pipeCancellationSource = new System.Threading.CancellationTokenSource();
-                        _pipeReaderTask = System.Threading.Tasks.Task.Run(() => PipeReaderLoop(_pipeCancellationSource.Token));
-
-                        // Send current layout immediately
-                        SendCurrentKeyAllowlist();
-
-                        Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker pipe (started process)");
-                        return;
-                    }
-                    else
-                    {
-                        Main.Mod.Logger.Error("KeyViewer: Failed to connect to KeyBlocker pipe after starting process");
-                        CleanupKeyBlockerProcess();
-                    }
-                }
-                else
+                if (!File.Exists(keyBlockerPath))
                 {
                     Main.Mod.Logger.Error($"KeyViewer: KeyBlocker.exe not found at {keyBlockerPath}");
+                    return;
                 }
+
+                Main.Mod.Logger.Log($"KeyViewer: Starting KeyBlocker.exe from {keyBlockerPath}");
+                var process = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = keyBlockerPath,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                    }
+                };
+                process.Start();
+                UnityEngineMainThread.Enqueue(() => { if (!_keyBlockerCancelConnect) _keyBlockerProcess = process; });
+
+                // Retry connection with backoff — process needs time to create its pipe
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    System.Threading.Thread.Sleep(300 * (attempt + 1));
+                    if (TryConnectPipe(2000))
+                    {
+                        UnityEngineMainThread.Enqueue(OnPipeConnected);
+                        Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker (started process)");
+                        return;
+                    }
+                }
+
+                Main.Mod.Logger.Error("KeyViewer: Failed to connect to KeyBlocker after starting process");
+                UnityEngineMainThread.Enqueue(CleanupKeyBlockerProcess);
             }
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"KeyViewer: Failed to start KeyBlocker.exe: {e.Message}");
-                CleanupKeyBlockerProcess();
+                UnityEngineMainThread.Enqueue(CleanupKeyBlockerProcess);
             }
         }
 
         /// <summary>
-        /// Cleanup the named pipe client and KeyBlocker process
+        /// Called on the main thread after a successful pipe connection.
+        /// Starts the heartbeat coroutine and sends the initial allowlist.
         /// </summary>
-        private void CleanupKeyBlockerPipe()
+        private void OnPipeConnected()
         {
-            try
-            {
-                if (_pipeCancellationSource != null)
-                {
-                    _pipeCancellationSource.Cancel();
-                    _pipeCancellationSource.Dispose();
-                    _pipeCancellationSource = null;
-                }
-
-                if (_pipeReaderTask != null)
-                {
-                    _pipeReaderTask.Wait(1000); // Wait up to 1 second for completion
-                    _pipeReaderTask.Dispose();
-                    _pipeReaderTask = null;
-                }
-
-                if (_keyBlockerPipe != null)
-                {
-                    if (_keyBlockerPipe.IsConnected)
-                        _keyBlockerPipe.Dispose();
-                    _keyBlockerPipe = null;
-                }
-            }
-            catch (Exception e)
-            {
-                Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker pipe: {e.Message}");
-            }
-
-            // Also cleanup the process if we started it
-            CleanupKeyBlockerProcess();
+            if (_keyBlockerCancelConnect || _keyBlockerPipe == null || !_keyBlockerPipe.IsConnected) return;
+            if (_keyBlockerHeartbeat == null)
+                _keyBlockerHeartbeat = StartCoroutine(KeyBlockerHeartbeatCoroutine());
+            SendCurrentKeyAllowlist();
         }
 
         /// <summary>
-        /// Cleanup the KeyBlocker process if we started it
+        /// Attempt a single pipe connection with the given timeout.
+        /// Creates a new pipe and connects it. On failure, disposes the pipe.
+        /// Only called from background threads. Does NOT touch _keyBlockerPipe.
         /// </summary>
-        private void CleanupKeyBlockerProcess()
+        private bool TryConnectPipe(int timeoutMs)
         {
+            var pipe = new System.IO.Pipes.NamedPipeClientStream(
+                ".", "JipperKeyBlocker",
+                System.IO.Pipes.PipeDirection.InOut,
+                System.IO.Pipes.PipeOptions.None);
+
             try
             {
-                if (_keyBlockerProcess != null)
+                pipe.Connect(timeoutMs);
+                if (pipe.IsConnected)
                 {
-                    if (!_keyBlockerProcess.HasExited)
+                    // Assign on the main thread to avoid race with CleanupKeyBlockerPipe
+                    UnityEngineMainThread.Enqueue(() =>
                     {
-                        // Try graceful shutdown first
-                        _keyBlockerProcess.CloseMainWindow();
-
-                        // Wait a bit for graceful exit
-                        if (!_keyBlockerProcess.WaitForExit(2000)) // 2 second timeout
+                        if (!_keyBlockerCancelConnect)
                         {
-                            // Force kill if it didn't exit gracefully
-                            _keyBlockerProcess.Kill();
+                            SafeDisposePipe();
+                            _keyBlockerPipe = pipe;
                         }
-                    }
-
-                    _keyBlockerProcess.Dispose();
-                    _keyBlockerProcess = null;
+                        else
+                        {
+                            pipe.Dispose();
+                        }
+                    });
+                    return true;
                 }
             }
+            catch (TimeoutException) { }
+            catch (System.IO.IOException) { }
             catch (Exception e)
             {
-                Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker process: {e.Message}");
+                Main.Mod.Logger.Error($"KeyViewer: Pipe connect error: {e.Message}");
             }
+
+            pipe.Dispose();
+            return false;
         }
 
-        /// <summary>
-        /// Background task to read responses from KeyBlocker pipe
-        /// </summary>
-        private void PipeReaderLoop(System.Threading.CancellationToken token)
+        /// <summary>Thread-safe queue for scheduling actions on Unity's main thread</summary>
+        private static class UnityEngineMainThread
         {
-            try
-            {
-                using (var reader = new System.IO.StreamReader(_keyBlockerPipe, System.Text.Encoding.UTF8, false, 1024, leaveOpen: true))
-                {
-                    while (!token.IsCancellationRequested && _keyBlockerPipe.IsConnected)
-                    {
-                        try
-                        {
-                            string line = reader.ReadLine();
-                            if (line == null) break;
+            private static readonly Queue<Action> _queue = new Queue<Action>();
 
-                            // Process responses from KeyBlocker (STATUS, etc.)
-                            if (line.StartsWith("BLOCKED="))
-                            {
-                                // Could update UI or log blocked count if needed
-                                // Main.Mod.Logger.Log($"KeyBlocker: {line}");
-                            }
-                        }
-                        catch (System.IO.IOException)
-                        {
-                            // Pipe disconnected
-                            break;
-                        }
-                    }
+            public static void Enqueue(Action action)
+            {
+                lock (_queue) { _queue.Enqueue(action); }
+            }
+
+            public static void Drain()
+            {
+                lock (_queue)
+                {
+                    while (_queue.Count > 0)
+                        _queue.Dequeue()?.Invoke();
                 }
-            }
-            catch (System.ObjectDisposedException)
-            {
-                // Expected when pipe is disposed
-            }
-            catch (Exception e)
-            {
-                if (!token.IsCancellationRequested)
-                    Main.Mod.Logger.Error($"KeyViewer: Pipe reader error: {e.Message}");
             }
         }
 
         /// <summary>
-        /// Send the current key layout's VK codes to KeyBlocker as allowlist
+        /// Periodically sends HEARTBEAT and re-sends allowlist (in case layout changed).
+        /// If the pipe disconnects, schedules reconnection on a background thread.
+        /// Always runs on the main thread.
+        /// </summary>
+        private IEnumerator KeyBlockerHeartbeatCoroutine()
+        {
+            while (Settings.EnableKeyBlocker && !_keyBlockerCancelConnect)
+            {
+                yield return new WaitForSeconds(3f);
+
+                if (_keyBlockerCancelConnect) break;
+                if (_keyBlockerPipe == null || !_keyBlockerPipe.IsConnected)
+                {
+                    // Schedule reconnection on background thread (non-blocking)
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        if (TryConnectPipe(1000))
+                            UnityEngineMainThread.Enqueue(OnPipeConnected);
+                    });
+                    continue;
+                }
+
+                try
+                {
+                    byte[] heartbeat = System.Text.Encoding.UTF8.GetBytes("HEARTBEAT\n");
+                    _keyBlockerPipe.Write(heartbeat, 0, heartbeat.Length);
+                    _keyBlockerPipe.Flush();
+                    SendCurrentKeyAllowlist();
+                }
+                catch (Exception)
+                {
+                    SafeDisposePipe();
+                }
+            }
+            _keyBlockerHeartbeat = null;
+        }
+
+        /// <summary>
+        /// Send the current key layout's VK codes to KeyBlocker as allowlist.
+        /// Always called on the main thread.
         /// </summary>
         private void SendCurrentKeyAllowlist()
         {
@@ -640,34 +619,23 @@ namespace JipperKeyViewer.KeyViewer
 
             try
             {
-                // Collect all currently used keys from layouts
-                var vkCodes = new System.Collections.Generic.HashSet<ushort>();
+                var vkCodes = new HashSet<ushort>();
 
-                // Add main keys
-                KeyCode[] mainKeys = GetKeyCode();
-                foreach (KeyCode kc in mainKeys)
-                {
-                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
-                        vkCodes.Add(vk);
-                }
+                foreach (KeyCode kc in GetKeyCode())
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk)) vkCodes.Add(vk);
+                foreach (KeyCode kc in GetFootKeyCode())
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk)) vkCodes.Add(vk);
+                foreach (KeyCode kc in GetGhostKeyCode())
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk)) vkCodes.Add(vk);
 
-                // Add foot keys
-                KeyCode[] footKeys = GetFootKeyCode();
-                foreach (KeyCode kc in footKeys)
-                {
-                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
-                        vkCodes.Add(vk);
-                }
+                // System keys that must always be allowed
+                vkCodes.Add(0x1B); // Escape
+                vkCodes.Add(0x09); // Tab
+                vkCodes.Add(0x0D); // Enter / Return
+                vkCodes.Add(0x20); // Space
+                vkCodes.Add(0x08); // Backspace
 
-                // Add ghost keys (they don't display but still need to be allowed for rain)
-                KeyCode[] ghostKeys = GetGhostKeyCode();
-                foreach (KeyCode kc in ghostKeys)
-                {
-                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
-                        vkCodes.Add(vk);
-                }
-
-                // Add commonly used modifier keys that might be needed
+                // Modifier keys
                 vkCodes.Add(0xA0); // Left Shift
                 vkCodes.Add(0xA1); // Right Shift
                 vkCodes.Add(0xA2); // Left Control
@@ -675,11 +643,8 @@ namespace JipperKeyViewer.KeyViewer
                 vkCodes.Add(0xA4); // Left Alt
                 vkCodes.Add(0xA5); // Right Alt
 
-                // Format as comma-separated hex values
                 string hexList = string.Join(",", vkCodes.Select(vk => vk.ToString("X2")));
-                string command = $"ALLOW {hexList}\n";
-
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(command);
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes($"ALLOW {hexList}\n");
                 _keyBlockerPipe.Write(bytes, 0, bytes.Length);
                 _keyBlockerPipe.Flush();
 
@@ -688,11 +653,76 @@ namespace JipperKeyViewer.KeyViewer
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"KeyViewer: Failed to send allowlist: {e.Message}");
-                // Mark as disconnected so we'll retry next time
-                CleanupKeyBlockerPipe();
+                SafeDisposePipe();
             }
         }
 
+        /// <summary>
+        /// Dispose the pipe object regardless of connection state.
+        /// Always called on the main thread.
+        /// </summary>
+        private void SafeDisposePipe()
+        {
+            if (_keyBlockerPipe != null)
+            {
+                try { _keyBlockerPipe.Dispose(); } catch { }
+                _keyBlockerPipe = null;
+            }
+        }
+
+        /// <summary>
+        /// Cleanup the named pipe client and stop the heartbeat coroutine.
+        /// Sends DISABLE command to C++ to immediately stop key interception.
+        /// Always called on the main thread.
+        /// </summary>
+        private void CleanupKeyBlockerPipe()
+        {
+            _keyBlockerCancelConnect = true;
+            if (_keyBlockerHeartbeat != null)
+            {
+                StopCoroutine(_keyBlockerHeartbeat);
+                _keyBlockerHeartbeat = null;
+            }
+            // Notify C++ side to stop blocking immediately
+            if (_keyBlockerPipe != null && _keyBlockerPipe.IsConnected)
+            {
+                try
+                {
+                    byte[] disable = System.Text.Encoding.UTF8.GetBytes("DISABLE\n");
+                    _keyBlockerPipe.Write(disable, 0, disable.Length);
+                    _keyBlockerPipe.Flush();
+                }
+                catch { }
+            }
+            SafeDisposePipe();
+            CleanupKeyBlockerProcess();
+        }
+
+        /// <summary>
+        /// Force-terminate the KeyBlocker process we started.
+        /// Always called on the main thread.
+        /// </summary>
+        private void CleanupKeyBlockerProcess()
+        {
+            if (_keyBlockerProcess == null) return;
+            try
+            {
+                if (!_keyBlockerProcess.HasExited)
+                {
+                    _keyBlockerProcess.Kill();
+                    _keyBlockerProcess.WaitForExit(1000);
+                }
+                _keyBlockerProcess.Dispose();
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker process: {e.Message}");
+            }
+            _keyBlockerProcess = null;
+        }
+
+        /// <summary>
+        /// Save current settings to JSON file / 将当前设置保存到 JSON 文件
         /// </summary>
         public void SaveSettings()
         {

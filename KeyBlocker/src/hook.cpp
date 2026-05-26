@@ -1,12 +1,20 @@
 #include "hook.h"
+#include <chrono>
 
 KeyHook* KeyHook::s_instance = nullptr;
 HHOOK KeyHook::s_hHook = nullptr;
-bool KeyHook::s_enabled = true;
+std::atomic<bool> KeyHook::s_enabled{true};
 std::unordered_set<DWORD> KeyHook::s_allowedKeys;
-DWORD KeyHook::s_blockedCount = 0;
-std::mutex KeyHook::s_mutex;
+std::shared_mutex KeyHook::s_mutex;
+std::atomic<LONG64> KeyHook::s_lastHeartbeatMs{0};
+std::atomic<DWORD> KeyHook::s_blockedCount{0};
 volatile LONG KeyHook::s_pendingUninstall = 0;
+
+static LONG64 NowMs()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 KeyHook::~KeyHook()
 {
@@ -17,6 +25,7 @@ bool KeyHook::Install()
 {
     if (s_hHook) return true;
     s_instance = this;
+    s_lastHeartbeatMs.store(NowMs());
     s_hHook = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandleW(nullptr), 0);
     return s_hHook != nullptr;
 }
@@ -34,32 +43,35 @@ void KeyHook::Uninstall()
 
 void KeyHook::SetAllowedKeys(const std::unordered_set<DWORD>& keys)
 {
-    std::lock_guard<std::mutex> lock(s_mutex);
+    std::unique_lock lock(s_mutex);
     s_allowedKeys = keys;
+    s_lastHeartbeatMs.store(NowMs());
 }
 
 void KeyHook::SetEnabled(bool enabled)
 {
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_enabled = enabled;
-    if (!enabled) ResetBlockedCount();
+    s_enabled.store(enabled);
+    if (!enabled) s_blockedCount.store(0);
 }
 
 bool KeyHook::IsEnabled() const
 {
-    std::lock_guard<std::mutex> lock(s_mutex);
-    return s_enabled;
+    return s_enabled.load();
 }
 
 DWORD KeyHook::GetBlockedCount() const
 {
-    // atomic read, no lock needed for single DWORD aligned access
-    return s_blockedCount;
+    return s_blockedCount.load();
 }
 
 void KeyHook::ResetBlockedCount()
 {
-    s_blockedCount = 0;
+    s_blockedCount.store(0);
+}
+
+void KeyHook::Heartbeat()
+{
+    s_lastHeartbeatMs.store(NowMs());
 }
 
 LRESULT CALLBACK KeyHook::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
@@ -67,25 +79,36 @@ LRESULT CALLBACK KeyHook::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM 
     if (s_pendingUninstall) return CallNextHookEx(nullptr, nCode, wParam, lParam);
     if (nCode != HC_ACTION) return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
-    // Only filter key down/up events
     if (wParam != WM_KEYDOWN && wParam != WM_KEYUP &&
         wParam != WM_SYSKEYDOWN && wParam != WM_SYSKEYUP)
         return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
+    // Heartbeat timeout: auto-disable if C# process died / disconnected
+    if (s_enabled.load())
     {
-        std::lock_guard<std::mutex> lock(s_mutex);
-        if (!s_enabled) return CallNextHookEx(nullptr, nCode, wParam, lParam);
+        LONG64 elapsed = NowMs() - s_lastHeartbeatMs.load();
+        if (elapsed > HEARTBEAT_TIMEOUT_MS)
+        {
+            s_enabled.store(false);
+            s_blockedCount.store(0);
+        }
+    }
 
-        auto& kbd = *(KBDLLHOOKSTRUCT*)lParam;
+    if (!s_enabled.load())
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
-        // Always allow Escape key (VK_ESCAPE = 0x1B) regardless of allowlist
-        if (kbd.vkCode == VK_ESCAPE)
-            return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    auto& kbd = *(KBDLLHOOKSTRUCT*)lParam;
 
+    // Always allow Escape regardless of allowlist
+    if (kbd.vkCode == VK_ESCAPE)
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+
+    // Shared lock: multiple hook invocations can check the set concurrently
+    {
+        std::shared_lock lock(s_mutex);
         if (s_allowedKeys.empty() || s_allowedKeys.count(kbd.vkCode) == 0)
         {
-            // Block this key — return 1 to prevent the message from being dispatched
-            s_blockedCount++;
+            s_blockedCount.fetch_add(1);
             return 1;
         }
     }

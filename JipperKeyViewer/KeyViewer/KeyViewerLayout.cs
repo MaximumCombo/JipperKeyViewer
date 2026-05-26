@@ -742,6 +742,7 @@ namespace JipperKeyViewer.KeyViewer
         private void ChangeKeyViewer()
         {
             ResetKeyViewer();
+            SendCurrentKeyAllowlist();
         }
 
         /// <summary>
@@ -819,6 +820,7 @@ namespace JipperKeyViewer.KeyViewer
             if (Settings.CustomPositionEnabled)
                 ResetFootKeyViewerPosition();
             RefreshAllCountDisplay();
+            SendCurrentKeyAllowlist();
         }
 
         /// <summary>

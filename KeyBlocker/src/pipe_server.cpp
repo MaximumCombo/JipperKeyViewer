@@ -4,25 +4,18 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 
 bool PipeServer::Start()
 {
-    if (m_running) return true;
-    m_running = true;
+    if (m_running.load()) return true;
+    m_running.store(true);
     m_thread = std::thread(&PipeServer::Run, this);
     return true;
 }
 
 void PipeServer::Stop()
 {
-    m_running = false;
-    if (m_hPipe != INVALID_HANDLE_VALUE)
-    {
-        CancelIoEx(m_hPipe, nullptr);
-        CloseHandle(m_hPipe);
-        m_hPipe = INVALID_HANDLE_VALUE;
-    }
+    m_running.store(false);
     if (m_thread.joinable())
         m_thread.join();
 }
@@ -50,7 +43,6 @@ static DWORD ParseVkCode(const std::string& token)
     {
         size_t pos = 0;
         int val = 0;
-        // Check if it starts with 0x or 0X for hex
         if (token.size() >= 2 && (token[0] == '0' && (token[1] == 'x' || token[1] == 'X')))
         {
             val = std::stoi(token.substr(2), &pos, 16);
@@ -59,21 +51,18 @@ static DWORD ParseVkCode(const std::string& token)
         }
         else
         {
-            // Try hex without prefix
             val = std::stoi(token, &pos, 16);
             if (pos == token.size())
                 return (DWORD)val;
         }
-        // Try decimal
         val = std::stoi(token, &pos, 10);
         if (pos == token.size())
             return (DWORD)val;
     }
     catch (const std::exception&)
     {
-        // If any parsing fails, return 0 (invalid)
     }
-    return 0; // unknown
+    return 0;
 }
 
 void PipeServer::HandleCommand(const std::string& cmd, HANDLE hPipe)
@@ -101,13 +90,11 @@ void PipeServer::HandleCommand(const std::string& cmd, HANDLE hPipe)
         DWORD written;
         WriteFile(hPipe, reply.data(), (DWORD)reply.size(), &written, nullptr);
         FlushFileBuffers(hPipe);
-        // Signal main thread to quit
         PostQuitMessage(0);
         return;
     }
     else if (cmd.rfind("ALLOW", 0) == 0 && cmd.size() > 6)
     {
-        // "ALLOW vk1,vk2,vk3,..."
         std::string data = Trim(cmd.substr(5));
         auto tokens = Split(data, ',');
         std::unordered_set<DWORD> keys;
@@ -117,10 +104,16 @@ void PipeServer::HandleCommand(const std::string& cmd, HANDLE hPipe)
             if (vk > 0) keys.insert(vk);
         }
         m_hook.SetAllowedKeys(keys);
+        m_hook.SetEnabled(true);
         if (keys.empty())
             reply = "ERROR=no valid keys";
         else
             reply = "OK";
+    }
+    else if (cmd == "HEARTBEAT")
+    {
+        m_hook.Heartbeat();
+        reply = "OK";
     }
     else
     {
@@ -134,40 +127,54 @@ void PipeServer::HandleCommand(const std::string& cmd, HANDLE hPipe)
 
 void PipeServer::Run()
 {
-    while (m_running)
+    while (m_running.load())
     {
-        m_hPipe = CreateNamedPipeW(
+        HANDLE hPipe = CreateNamedPipeW(
             PIPE_NAME,
             PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
             PIPE_UNLIMITED_INSTANCES,
             4096, 4096, 0, nullptr);
 
-        if (m_hPipe == INVALID_HANDLE_VALUE)
+        if (hPipe == INVALID_HANDLE_VALUE)
         {
             Sleep(1000);
             continue;
         }
 
-        bool connected = ConnectNamedPipe(m_hPipe, nullptr) ? true : (GetLastError() == ERROR_PIPE_CONNECTED);
+        // Store handle for Stop() to cancel blocking ConnectNamedPipe
+        {
+            std::lock_guard<std::mutex> lock(m_handleMutex);
+            m_hPipe = hPipe;
+        }
+
+        bool connected = ConnectNamedPipe(hPipe, nullptr) ? true : (GetLastError() == ERROR_PIPE_CONNECTED);
         if (!connected)
         {
-            CloseHandle(m_hPipe);
+            std::lock_guard<std::mutex> lock(m_handleMutex);
+            CloseHandle(hPipe);
             m_hPipe = INVALID_HANDLE_VALUE;
             continue;
         }
 
+        // Read multiple commands on the same connection (persistent pipe)
         char buf[4096];
-        DWORD read;
-        if (ReadFile(m_hPipe, buf, sizeof(buf) - 1, &read, nullptr) && read > 0)
+        while (m_running.load())
         {
+            DWORD read = 0;
+            if (!ReadFile(hPipe, buf, sizeof(buf) - 1, &read, nullptr) || read == 0)
+                break;
             buf[read] = '\0';
             std::string cmd = Trim(buf);
-            HandleCommand(cmd, m_hPipe);
+            if (!cmd.empty())
+                HandleCommand(cmd, hPipe);
         }
 
-        DisconnectNamedPipe(m_hPipe);
-        CloseHandle(m_hPipe);
-        m_hPipe = INVALID_HANDLE_VALUE;
+        DisconnectNamedPipe(hPipe);
+        {
+            std::lock_guard<std::mutex> lock(m_handleMutex);
+            CloseHandle(hPipe);
+            m_hPipe = INVALID_HANDLE_VALUE;
+        }
     }
 }

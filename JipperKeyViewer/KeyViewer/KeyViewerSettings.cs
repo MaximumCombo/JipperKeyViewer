@@ -222,7 +222,6 @@ namespace JipperKeyViewer.KeyViewer
             GhostKey16 = GhostKey16 ?? new KeyCode[16];
             GhostKey20 = GhostKey20 ?? new KeyCode[20];
             Count = Count ?? new int[36];
-            EnableKeyBlocker = false;
             if (PerKeyBackground == null || PerKeyBackground.Length != 38 ||
                 PerKeyBackgroundClicked == null || PerKeyBackgroundClicked.Length != 38 ||
                 PerKeyOutline == null || PerKeyOutline.Length != 38 ||

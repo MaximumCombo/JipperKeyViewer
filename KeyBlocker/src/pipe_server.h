@@ -2,8 +2,10 @@
 #include <windows.h>
 #include <string>
 #include <thread>
+#include <atomic>
+#include <mutex>
 
-class KeyHook; // forward declaration
+class KeyHook;
 
 class PipeServer
 {
@@ -19,8 +21,9 @@ private:
 
     KeyHook& m_hook;
     HANDLE m_hPipe = INVALID_HANDLE_VALUE;
+    std::mutex m_handleMutex;
     std::thread m_thread;
-    volatile bool m_running = false;
+    std::atomic<bool> m_running{false};
 
     static constexpr const wchar_t* PIPE_NAME = L"\\\\.\\pipe\\JipperKeyBlocker";
 };
