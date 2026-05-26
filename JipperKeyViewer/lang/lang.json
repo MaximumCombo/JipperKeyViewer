@@ -59,6 +59,7 @@
     { "key": "auto_rainbow", "en": "Auto Rainbow KV", "zh": "自动彩色KV", "ko": "자동 무지개 KV" },
     { "key": "foot_keys_text", "en": "Foot Key Text", "zh": "脚键文本", "ko": "발판 키 텍스트" },
     { "key": "streamer_mode", "en": "Hide KPS/Total", "zh": "隐藏KPS/总计数", "ko": "KPS/총계 숨기기" },
+    { "key": "key_blocker", "en": "Enable Key Blocker", "zh": "启用按键拦截器", "ko": "키 차단기 활성화" },
     { "key": "kps_colors", "en": "KPS Colors", "zh": "KPS 颜色", "ko": "KPS 색상" },
     { "key": "total_colors", "en": "Total Colors", "zh": "Total 颜色", "ko": "Total 색상" },
     { "key": "open_config_folder", "en": "Open Config Folder", "zh": "打开配置文件夹", "ko": "설정 폴더 열기" },

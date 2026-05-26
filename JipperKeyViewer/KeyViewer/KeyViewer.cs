@@ -146,6 +146,12 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Whether the font has been restored after scene load / 场景加载后字体是否已恢复</summary>
         private bool fontRestored;
 
+        // KeyBlocker integration: named pipe client for sending key allowlist to native blocker
+        private System.IO.Pipes.NamedPipeClientStream _keyBlockerPipe;
+        private bool _keyBlockerEnabled;
+        private System.Threading.Tasks.Task _pipeReaderTask;
+        private System.Threading.CancellationTokenSource _pipeCancellationSource;
+
         // ======================== Unity Lifecycle / Unity 生命周期 ========================
 
         /// <summary>
@@ -162,6 +168,9 @@ namespace JipperKeyViewer.KeyViewer
             rainSystem.GhostRainSprite = ghostRainSprite;
             wasEnabled = Settings.Enabled;
             SceneManager.sceneLoaded += OnSceneLoaded;
+
+            // Initialize KeyBlocker pipe client
+            InitializeKeyBlockerPipe();
         }
 
         /// <summary>
@@ -208,6 +217,8 @@ namespace JipperKeyViewer.KeyViewer
         {
             SaveSettings();
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            // Cleanup KeyBlocker pipe
+            CleanupKeyBlockerPipe();
             rainSystem?.ClearAll(Keys);
             foreach (var mat in shadowMaterials.Values)
                 Destroy(mat);
@@ -346,6 +357,242 @@ namespace JipperKeyViewer.KeyViewer
 
         /// <summary>
         /// Save current settings to JSON file / 将当前设置保存到 JSON 文件
+        // Key code mapping from Unity KeyCode to Windows Virtual-Key codes
+        private static readonly Dictionary<KeyCode, ushort> KeyCodeToVK = new Dictionary<KeyCode, ushort>
+        {
+            // Letters
+            [KeyCode.A] = 0x41, [KeyCode.B] = 0x42, [KeyCode.C] = 0x43, [KeyCode.D] = 0x44,
+            [KeyCode.E] = 0x45, [KeyCode.F] = 0x46, [KeyCode.G] = 0x47, [KeyCode.H] = 0x48,
+            [KeyCode.I] = 0x49, [KeyCode.J] = 0x4A, [KeyCode.K] = 0x4B, [KeyCode.L] = 0x4C,
+            [KeyCode.M] = 0x4D, [KeyCode.N] = 0x4E, [KeyCode.O] = 0x4F, [KeyCode.P] = 0x50,
+            [KeyCode.Q] = 0x51, [KeyCode.R] = 0x52, [KeyCode.S] = 0x53, [KeyCode.T] = 0x54,
+            [KeyCode.U] = 0x55, [KeyCode.V] = 0x56, [KeyCode.W] = 0x57, [KeyCode.X] = 0x58,
+            [KeyCode.Y] = 0x59, [KeyCode.Z] = 0x5A,
+
+            // Numbers
+            [KeyCode.Alpha0] = 0x30, [KeyCode.Alpha1] = 0x31, [KeyCode.Alpha2] = 0x32,
+            [KeyCode.Alpha3] = 0x33, [KeyCode.Alpha4] = 0x34, [KeyCode.Alpha5] = 0x35,
+            [KeyCode.Alpha6] = 0x36, [KeyCode.Alpha7] = 0x37, [KeyCode.Alpha8] = 0x38,
+            [KeyCode.Alpha9] = 0x39,
+
+            // Numpad
+            [KeyCode.Keypad0] = 0x60, [KeyCode.Keypad1] = 0x61, [KeyCode.Keypad2] = 0x62,
+            [KeyCode.Keypad3] = 0x63, [KeyCode.Keypad4] = 0x64, [KeyCode.Keypad5] = 0x65,
+            [KeyCode.Keypad6] = 0x66, [KeyCode.Keypad7] = 0x67, [KeyCode.Keypad8] = 0x68,
+            [KeyCode.Keypad9] = 0x69, [KeyCode.KeypadPeriod] = 0x6E, [KeyCode.KeypadDivide] = 0x6F,
+            [KeyCode.KeypadMultiply] = 0x37, [KeyCode.KeypadMinus] = 0x6A, [KeyCode.KeypadPlus] = 0x6B,
+            [KeyCode.KeypadEnter] = 0x0D,
+
+            // Function keys
+            [KeyCode.F1] = 0x70, [KeyCode.F2] = 0x71, [KeyCode.F3] = 0x72, [KeyCode.F4] = 0x73,
+            [KeyCode.F5] = 0x74, [KeyCode.F6] = 0x75, [KeyCode.F7] = 0x76, [KeyCode.F8] = 0x77,
+            [KeyCode.F9] = 0x78, [KeyCode.F10] = 0x79, [KeyCode.F11] = 0x7A, [KeyCode.F12] = 0x7B,
+
+            // Navigation
+            [KeyCode.UpArrow] = 0x26, [KeyCode.DownArrow] = 0x28,
+            [KeyCode.LeftArrow] = 0x25, [KeyCode.RightArrow] = 0x27,
+            [KeyCode.Home] = 0x24, [KeyCode.End] = 0x23,
+            [KeyCode.PageUp] = 0x21, [KeyCode.PageDown] = 0x22,
+
+            // Editing
+            [KeyCode.Insert] = 0x2D, [KeyCode.Delete] = 0x2E,
+
+            // Modifiers
+            [KeyCode.LeftShift] = 0xA0, [KeyCode.RightShift] = 0xA1,
+            [KeyCode.LeftControl] = 0xA2, [KeyCode.RightControl] = 0xA3,
+            [KeyCode.LeftAlt] = 0xA4, [KeyCode.RightAlt] = 0xA5,
+            [KeyCode.LeftCommand] = 0x5B, [KeyCode.RightCommand] = 0x5C,
+
+            // Special
+            [KeyCode.Tab] = 0x09, [KeyCode.Space] = 0x20, [KeyCode.Return] = 0x0D,
+            [KeyCode.Escape] = 0x1B, [KeyCode.Backspace] = 0x08,
+            [KeyCode.CapsLock] = 0x14, [KeyCode.ScrollLock] = 0x91,
+            [KeyCode.Pause] = 0x13,
+
+            // Punctuation
+            [KeyCode.Semicolon] = 0xBA, [KeyCode.Equals] = 0xBB, [KeyCode.Comma] = 0xBC,
+            [KeyCode.Minus] = 0xBD, [KeyCode.Period] = 0xBE, [KeyCode.Slash] = 0xBF,
+            [KeyCode.BackQuote] = 0xC0, [KeyCode.LeftBracket] = 0xDB,
+            [KeyCode.Backslash] = 0xDC, [KeyCode.RightBracket] = 0xDD,
+            [KeyCode.Quote] = 0xDE
+        };
+
+        /// <summary>
+        /// Initialize the named pipe client to communicate with KeyBlocker native process
+        /// </summary>
+        private void InitializeKeyBlockerPipe()
+        {
+            try
+            {
+                _keyBlockerPipe = new System.IO.Pipes.NamedPipeClientStream(
+                    ".",
+                    "JipperKeyBlocker",
+                    System.IO.Pipes.PipeDirection.Out,
+                    System.IO.Pipes.PipeOptions.Asynchronous);
+
+                _keyBlockerPipe.Connect(1000); // 1 second timeout
+
+                if (_keyBlockerPipe.IsConnected)
+                {
+                    _pipeCancellationSource = new System.Threading.CancellationTokenSource();
+                    _pipeReaderTask = System.Threading.Tasks.Task.Run(() => PipeReaderLoop(_pipeCancellationSource.Token));
+
+                    // Send current layout immediately
+                    SendCurrentKeyAllowlist();
+
+                    Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker pipe");
+                }
+            }
+            catch (System.IO.IOException)
+            {
+                // Pipe server not running yet - that's OK, we'll retry later
+                Main.Mod.Logger.Log("KeyViewer: KeyBlocker pipe not available, will retry on enable");
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Failed to initialize KeyBlocker pipe: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cleanup the named pipe client
+        /// </summary>
+        private void CleanupKeyBlockerPipe()
+        {
+            try
+            {
+                if (_pipeCancellationSource != null)
+                {
+                    _pipeCancellationSource.Cancel();
+                    _pipeCancellationSource.Dispose();
+                    _pipeCancellationSource = null;
+                }
+
+                if (_pipeReaderTask != null)
+                {
+                    _pipeReaderTask.Wait(1000); // Wait up to 1 second for completion
+                    _pipeReaderTask.Dispose();
+                    _pipeReaderTask = null;
+                }
+
+                if (_keyBlockerPipe != null)
+                {
+                    if (_keyBlockerPipe.IsConnected)
+                        _keyBlockerPipe.Dispose();
+                    _keyBlockerPipe = null;
+                }
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker pipe: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Background task to read responses from KeyBlocker pipe
+        /// </summary>
+        private void PipeReaderLoop(System.Threading.CancellationToken token)
+        {
+            try
+            {
+                using (var reader = new System.IO.StreamReader(_keyBlockerPipe, leaveOpen: true))
+                {
+                    while (!token.IsCancellationRequested && _keyBlockerPipe.IsConnected)
+                    {
+                        try
+                        {
+                            string line = reader.ReadLine();
+                            if (line == null) break;
+
+                            // Process responses from KeyBlocker (STATUS, etc.)
+                            if (line.StartsWith("BLOCKED="))
+                            {
+                                // Could update UI or log blocked count if needed
+                                // Main.Mod.Logger.Log($"KeyBlocker: {line}");
+                            }
+                        }
+                        catch (System.IO.IOException)
+                        {
+                            // Pipe disconnected
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (System.ObjectDisposedException)
+            {
+                // Expected when pipe is disposed
+            }
+            catch (Exception e)
+            {
+                if (!token.IsCancellationRequested)
+                    Main.Mod.Logger.Error($"KeyViewer: Pipe reader error: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Send the current key layout's VK codes to KeyBlocker as allowlist
+        /// </summary>
+        private void SendCurrentKeyAllowlist()
+        {
+            if (_keyBlockerPipe == null || !_keyBlockerPipe.IsConnected)
+                return;
+
+            try
+            {
+                // Collect all currently used keys from layouts
+                var vkCodes = new System.Collections.Generic.HashSet<ushort>();
+
+                // Add main keys
+                KeyCode[] mainKeys = GetKeyCode();
+                foreach (KeyCode kc in mainKeys)
+                {
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
+                        vkCodes.Add(vk);
+                }
+
+                // Add foot keys
+                KeyCode[] footKeys = GetFootKeyCode();
+                foreach (KeyCode kc in footKeys)
+                {
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
+                        vkCodes.Add(vk);
+                }
+
+                // Add ghost keys (they don't display but still need to be allowed for rain)
+                KeyCode[] ghostKeys = GetGhostKeyCode();
+                foreach (KeyCode kc in ghostKeys)
+                {
+                    if (KeyCodeToVK.TryGetValue(kc, out ushort vk))
+                        vkCodes.Add(vk);
+                }
+
+                // Add commonly used modifier keys that might be needed
+                vkCodes.Add(0xA0); // Left Shift
+                vkCodes.Add(0xA1); // Right Shift
+                vkCodes.Add(0xA2); // Left Control
+                vkCodes.Add(0xA3); // Right Control
+                vkCodes.Add(0xA4); // Left Alt
+                vkCodes.Add(0xA5); // Right Alt
+
+                // Format as comma-separated hex values
+                string hexList = string.Join(",", vkCodes.Select(vk => vk.ToString("X2")));
+                string command = $"ALLOW {hexList}\n";
+
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(command);
+                _keyBlockerPipe.Write(bytes, 0, bytes.Length);
+                _keyBlockerPipe.Flush();
+
+                Main.Mod.Logger.Log($"KeyViewer: Sent allowlist with {vkCodes.Count} keys to KeyBlocker");
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Failed to send allowlist: {e.Message}");
+                // Mark as disconnected so we'll retry next time
+                CleanupKeyBlockerPipe();
+            }
+        }
+
         /// </summary>
         public void SaveSettings()
         {

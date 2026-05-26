@@ -157,6 +157,9 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Streamer mode — hide KPS and Total displays / 流媒体模式 — 隐藏 KPS 和 Total 显示</summary>
         public bool StreamerMode = false;
 
+        /// <summary>Enable global key blocking via native interceptor / 启用全局按键拦截（需要管理员权限）</summary>
+        public bool EnableKeyBlocker = false;
+
         /// <summary>Per-key independent colors / 每键独立颜色</summary>
         public bool EnablePerKeyColors = false;
         /// <summary>Per-key colors (index 0-35) / 每键颜色配置</summary>
@@ -219,6 +222,7 @@ namespace JipperKeyViewer.KeyViewer
             GhostKey16 = GhostKey16 ?? new KeyCode[16];
             GhostKey20 = GhostKey20 ?? new KeyCode[20];
             Count = Count ?? new int[36];
+            EnableKeyBlocker = false;
             if (PerKeyBackground == null || PerKeyBackground.Length != 38 ||
                 PerKeyBackgroundClicked == null || PerKeyBackgroundClicked.Length != 38 ||
                 PerKeyOutline == null || PerKeyOutline.Length != 38 ||

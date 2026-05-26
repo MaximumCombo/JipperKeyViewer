@@ -384,6 +384,25 @@ namespace JipperKeyViewer.KeyViewer
                 SaveSettings();
             }
 
+            // KeyBlocker toggle / 全局按键拦截开关
+            bool newKeyBlocker = GUILayout.Toggle(Settings.EnableKeyBlocker, I18n.Tr("key_blocker"));
+            if (newKeyBlocker != Settings.EnableKeyBlocker)
+            {
+                Settings.EnableKeyBlocker = newKeyBlocker;
+                if (Settings.EnableKeyBlocker)
+                {
+                    // Try to initialize/connect to KeyBlocker when enabled
+                    KeyViewer.instance?.InitializeKeyBlockerPipe();
+                    KeyViewer.instance?.SendCurrentKeyAllowlist();
+                }
+                else
+                {
+                    // Cleanup when disabled
+                    KeyViewer.instance?.CleanupKeyBlockerPipe();
+                }
+                SaveSettings();
+            }
+
             GUILayout.Space(10);
 
             // Rain effect master toggle / 雨滴效果总开关
