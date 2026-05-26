@@ -74,6 +74,7 @@ Mods/JipperKeyViewer-FileBased/
 └── assets/
     ├── KeyBackground.png
     ├── KeyOutline.png
+    ├── GhostRain.png
     ├── MAPLESTORY_OTF_BOLD.OTF
     └── cjkFonts-regular-normalized.otf
 ```
