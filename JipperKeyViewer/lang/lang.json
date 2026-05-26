@@ -52,6 +52,7 @@
     { "key": "rain_fade", "en": "Release Fade", "zh": "松开淡出", "ko": "릴리스 페이드" },
     { "key": "fade_duration", "en": "Fade Duration", "zh": "淡出时长", "ko": "페이드 시간" },
     { "key": "hide_main_count", "en": "Hide Main Key Count", "zh": "隐藏主按键计数", "ko": "메인 키 카운트 숨기기" },
+    { "key": "per_key_kps", "en": "Per-Key KPS", "zh": "每键KPS", "ko": "키별 KPS" },
     { "key": "per_key_colors", "en": "Per-Key Colors", "zh": "每键独立颜色", "ko": "키별 색상" },
     { "key": "per_key_color_reset", "en": "Reset All to Default", "zh": "全部重置为默认", "ko": "모두 기본값으로 초기화" },
     { "key": "auto_rainbow", "en": "Auto Rainbow KV", "zh": "自动彩色KV", "ko": "자동 무지개 KV" },
