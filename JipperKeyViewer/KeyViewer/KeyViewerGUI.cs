@@ -323,13 +323,16 @@ namespace JipperKeyViewer.KeyViewer
                 SaveSettings();
             }
 
-            // Per-key KPS toggle / 每键 KPS 开关
-            bool newPerKeyKps = GUILayout.Toggle(Settings.EnablePerKeyKps, I18n.Tr("per_key_kps"));
-            if (newPerKeyKps != Settings.EnablePerKeyKps)
+            // Per-key KPS toggle / 每键 KPS 开关 (hidden when main key count is hidden / 隐藏主按键计数时隐藏)
+            if (!Settings.HideMainKeyCount)
             {
-                Settings.EnablePerKeyKps = newPerKeyKps;
-                RefreshAllCountDisplay();
-                SaveSettings();
+                bool newPerKeyKps = GUILayout.Toggle(Settings.EnablePerKeyKps, I18n.Tr("per_key_kps"));
+                if (newPerKeyKps != Settings.EnablePerKeyKps)
+                {
+                    Settings.EnablePerKeyKps = newPerKeyKps;
+                    RefreshAllCountDisplay();
+                    SaveSettings();
+                }
             }
 
             // Streamer Mode toggle / 流媒体模式开关
