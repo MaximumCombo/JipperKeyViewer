@@ -39,7 +39,11 @@ namespace JipperKeyViewer.KeyViewer
             {
                 KeyCode[] ghostKeyCodes = GetGhostKeyCode();
                 if (SelectedKey < ghostKeyCodes.Length)
+                {
                     ghostKeyCodes[SelectedKey] = keyCode;
+                    if (SelectedKey < ghostKeyStates.Length)
+                        ghostKeyStates[SelectedKey] = false;
+                }
                 SelectedKey = -1;
                 SaveSettings();
                 return;

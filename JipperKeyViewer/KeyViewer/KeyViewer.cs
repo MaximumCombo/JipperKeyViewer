@@ -194,7 +194,6 @@ namespace JipperKeyViewer.KeyViewer
         void OnDisable()
         {
             DisableKeyViewer();
-            SaveSettings();
         }
 
         /// <summary>
@@ -298,6 +297,7 @@ namespace JipperKeyViewer.KeyViewer
                                 Clamp01(Settings.FootKeyViewerPosition.x / refW),
                                 1f - Clamp01(Settings.FootKeyViewerPosition.y / refH));
                             Settings.Version = 2;
+                            SaveSettings();
                         }
                         // Ensure arrays are initialized (prevents null refs from old saves) / 确保数组已初始化（防止旧存档的空引用）
                         Settings.key8Text = Settings.key8Text ?? new string[8];

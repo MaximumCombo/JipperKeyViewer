@@ -267,7 +267,7 @@ namespace JipperKeyViewer.KeyViewer
         }
 
         /// <summary>Returns the currently active translation dictionary / 返回当前活跃的翻译字典</summary>
-        static Dictionary<string, string> current => Lang == "en" ? en : Lang == "zh" ? zh : ko;
+        static Dictionary<string, string> current => Lang == "ko" ? ko : Lang == "zh" ? zh : en;
 
         /// <summary>
         /// Translate a key string to the current language / 将键翻译为当前语言

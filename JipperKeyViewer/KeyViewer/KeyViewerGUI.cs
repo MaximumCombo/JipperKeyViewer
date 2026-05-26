@@ -84,7 +84,7 @@ namespace JipperKeyViewer.KeyViewer
                 fontListExpanded = !fontListExpanded;
             if (fontListExpanded)
             {
-                if (fontList.Count > 1)
+                if (fontList.Count > 0)
                 {
                     int newIdx = Settings.FontIndex;
                     for (int i = 0; i < fontList.Count; i++)
