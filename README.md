@@ -25,12 +25,19 @@ Both build from the same solution (`JipperKeyViewer.slnx`) and share the same fe
 ## Features / 功能
 
 - Real-time on-screen key display with press feedback / 实时按键显示，按下时颜色变化
-- Multiple layouts: 8K, 10K, 12K, 16K, 20K + foot keys 2K-16K / 多布局 + 脚键
+- Multiple layouts: 8K, 10K, 12K, 14K, 16K, 20K + foot keys 2K-16K / 多布局 + 脚键
 - KPS counter & total key count / KPS 统计和总按键计数
-- Rain effect with smooth fade-out on key release (KeyViewer-4 style) / 雨滴特效，松开按键时平滑淡出
+- Per-key KPS display / 每键独立 KPS 显示
+- Rain effect with smooth fade-out on key release / 雨滴特效，松开按键时平滑淡出
+- Ghost rain: secondary keys that only trigger rain, no display / 鬼键雨滴：仅触发雨滴，无显示
+- Per-row rain controls (speed, height, toggle) / 每排雨滴独立控制（速度、高度、开关）
 - Per-key independent colors with Auto Rainbow KV / 每键独立颜色和自动彩虹KV
+- KPS / Total independent colors / KPS 和 Total 独立颜色
 - Hide main key count toggle / 隐藏主按键计数开关
+- Streamer mode (hide KPS/Total) / 流媒体模式（隐藏 KPS/Total）
+- Count formatting (1,234) / 大数字千分位格式化
 - Fully customizable: colors, fonts, position, size / 完全自定义：颜色、字体、位置、大小
+- Font style options: Bold, Italic, Underline, etc. / 字体样式：粗体、斜体、下划线等
 - Normalized custom positioning (0–1 range), auto-adapts to any resolution / 归一化自定义位置，自动适配任意分辨率
 - i18n: English / Chinese / Korean / 中英韩三语
 - Key rebinding & custom text labels / 按键绑定修改和自定义文本标签
@@ -111,19 +118,18 @@ To rebuild: open in Unity → `Tools → Build KeyViewer AssetBundle` → copy `
 │   ├── Main.cs                     # UMM entry point
 │   ├── KeyViewer/
 │   │   ├── KeyViewer.cs            # Core lifecycle & config
-│   │   ├── KeyViewerGUI.cs         # Settings window
+│   │   ├── KeyViewerGUI.cs         # Settings window (IMGUI)
 │   │   ├── KeyViewerInput.cs       # Key detection & rebinding
 │   │   ├── KeyViewerLayout.cs      # Layout, positioning, update loop
 │   │   ├── KeyViewerResources.cs   # AssetBundle & font management
 │   │   ├── KeyViewerSettings.cs    # Settings model & helpers
 │   │   ├── RainSystem.cs           # Rain effect manager & object pool
-│   │   ├── IRainSettings.cs        # Rain settings interface
 │   │   ├── Key.cs                  # Key MonoBehaviour
 │   │   ├── Rain.cs                 # Rain drop rendering
 │   │   ├── RawRain.cs              # Rain drop data
-│   │   ├── KeyviewerStyle.cs       # Layout enum
+│   │   ├── KeyviewerStyle.cs       # Main layout enum
 │   │   ├── FootKeyviewerStyle.cs   # Foot key layout enum
-│   │   └── I18n.cs                 # i18n system
+│   │   └── I18n.cs                 # i18n system (en/zh/ko)
 │   ├── Properties/AssemblyInfo.cs
 │   ├── lang/lang.json              # Translations
 │   └── assets/keyviewer_resources  # AssetBundle (runtime)
@@ -137,6 +143,23 @@ To rebuild: open in Unity → `Tools → Build KeyViewer AssetBundle` → copy `
     └── assets/                     # Loose PNG/OTF files (runtime)
 ```
 
+## Settings / 设置
+
+All settings are saved to `config/settings.json` and can be edited in the UMM settings panel.
+
+| Category | Options |
+|----------|---------|
+| **Layout** | Main: 8K/10K/12K/14K/16K/20K, Foot: Off/2K-16K |
+| **Position** | Custom position (X/Y 0-1), place below toggle |
+| **Size** | Scale slider (0.1x – 2.0x) |
+| **Colors** | Background, Outline, Text (normal + pressed), Rain (per-row), KPS, Total |
+| **Per-Key Colors** | Independent colors per key + Auto Rainbow KV |
+| **Font** | Built-in + custom fonts, style flags (Bold/Italic/Underline/etc.) |
+| **Rain** | Enable, per-row toggle/speed/height, fade-out on release, ghost rain |
+| **Display** | Hide main count, per-key KPS, streamer mode, count formatting |
+| **Keys** | Rebind any key, custom text labels, ghost key bindings |
+| **Language** | English / 中文 / 한국어 |
+
 ## Notes / 说明
 
 - Zero Harmony patches — fully compatible with game updates / 零 Harmony 补丁，完全兼容游戏更新
@@ -146,6 +169,7 @@ To rebuild: open in Unity → `Tools → Build KeyViewer AssetBundle` → copy `
 - Fonts: [Maplestory OTF](https://fontmeme.com/fonts/maplestory-font/), [cjkFonts](https://www.zitijia.com/i/321518733317131321.html)
 - Delta-accumulated rain timer: smooth animation even during GPU spikes / Delta 累加雨滴计时
 - Rain fade-out on key release: configurable duration, EaseOutQuad tween / 雨滴松开淡出：可配置时长
+- CJK fallback font chain: CJK characters display correctly with any font / CJK 后备字体链：任何字体下中文字符正确显示
 
 ## Acknowledgements / 鸣谢
 - Key layout and visual style references [JipperResourcePack](https://github.com/Jongye0l/JipperResourcePack).
