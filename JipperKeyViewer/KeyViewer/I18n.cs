@@ -207,8 +207,8 @@ namespace JipperKeyViewer.KeyViewer
             ["language"] = "언어",
             ["no_fonts_found"] = "(사용 가능한 글꼴 없음)",
             ["custom_font_tip"] = "사용자 글꼴: .ttf/.otf 파일을 CustomFont 폴더에 넣은 후 게임을 다시 시작하세요.",
-            ["key_blocker"] = "키 차단기 활성화"
             ["reset_counts"] = "카운트 초기화",
+            ["key_blocker"] = "키 차단기 활성화",
             ["count_formatting"] = "큰 숫자에 1,234 형식 사용",
             ["foot_keys_text"] = "발판 키 텍스트",
             ["hide_main_count"] = "메인 키 카운트 숨기기",

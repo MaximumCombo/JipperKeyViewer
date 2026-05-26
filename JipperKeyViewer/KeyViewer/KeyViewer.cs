@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -148,7 +149,6 @@ namespace JipperKeyViewer.KeyViewer
 
         // KeyBlocker integration: named pipe client for sending key allowlist to native blocker
         private System.IO.Pipes.NamedPipeClientStream _keyBlockerPipe;
-        private bool _keyBlockerEnabled;
         private System.Threading.Tasks.Task _pipeReaderTask;
         private System.Threading.CancellationTokenSource _pipeCancellationSource;
 
@@ -495,7 +495,7 @@ namespace JipperKeyViewer.KeyViewer
         {
             try
             {
-                using (var reader = new System.IO.StreamReader(_keyBlockerPipe, leaveOpen: true))
+                using (var reader = new System.IO.StreamReader(_keyBlockerPipe, System.Text.Encoding.UTF8, false, 1024, leaveOpen: true))
                 {
                     while (!token.IsCancellationRequested && _keyBlockerPipe.IsConnected)
                     {
