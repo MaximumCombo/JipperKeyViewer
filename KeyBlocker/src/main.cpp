@@ -40,7 +40,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 
     if (!hook.Install())
     {
-        MessageBoxW(nullptr, L"Failed to install keyboard hook.\nTry running as Administrator.", L"Error", MB_ICONERROR);
+        MessageBoxW(nullptr, L"Failed to install keyboard hook.\nAnother instance may already be running.", L"Error", MB_ICONERROR);
         DestroyWindow(hwnd);
         return 1;
     }
