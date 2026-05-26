@@ -68,6 +68,7 @@ namespace JipperKeyViewer.KeyViewer
             keyPressTimes = new Queue<long>[36];
             lastPerKeyKps = new int[36];
             Stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            RefreshAllCountDisplay();
         }
 
         /// <summary>
@@ -769,6 +770,7 @@ namespace JipperKeyViewer.KeyViewer
             }
             if (Settings.CustomPositionEnabled)
                 ResetKeyViewerPosition();
+            RefreshAllCountDisplay();
         }
 
         /// <summary>
@@ -814,6 +816,7 @@ namespace JipperKeyViewer.KeyViewer
             }
             if (Settings.CustomPositionEnabled)
                 ResetFootKeyViewerPosition();
+            RefreshAllCountDisplay();
         }
 
         /// <summary>
