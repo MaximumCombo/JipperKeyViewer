@@ -43,7 +43,7 @@ void KeyHook::Uninstall()
 
 void KeyHook::SetAllowedKeys(const std::unordered_set<DWORD>& keys)
 {
-    std::unique_lock lock(s_mutex);
+    std::unique_lock<std::shared_mutex> lock(s_mutex);
     s_allowedKeys = keys;
     s_lastHeartbeatMs.store(NowMs());
 }
@@ -105,7 +105,7 @@ LRESULT CALLBACK KeyHook::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM 
 
     // Shared lock: multiple hook invocations can check the set concurrently
     {
-        std::shared_lock lock(s_mutex);
+        std::shared_lock<std::shared_mutex> lock(s_mutex);
         if (s_allowedKeys.empty() || s_allowedKeys.count(kbd.vkCode) == 0)
         {
             s_blockedCount.fetch_add(1);
