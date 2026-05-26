@@ -415,9 +415,9 @@ namespace JipperKeyViewer.KeyViewer
                 key.rain?.SetActive(false);
                 key.rain = null;
             }
+            int pi = i >= 0 && i < Keys.Length ? i : i == -1 ? 36 : i == -2 ? 37 : -1;
             if (Settings.EnablePerKeyColors)
             {
-                int pi = i >= 0 && i < Keys.Length ? i : i == -1 ? 36 : i == -2 ? 37 : -1;
                 if (pi >= 0)
                 {
                     key.background.color = Settings.PerKeyBackground[pi];
@@ -426,6 +426,13 @@ namespace JipperKeyViewer.KeyViewer
                     if (key.value != null) key.value.color = Settings.PerKeyText[pi];
                     key.rainColor = Settings.PerKeyRainColor[pi];
                 }
+            }
+            else if (pi >= 36)
+            {
+                key.background.color = pi == 36 ? Settings.KpsBackground : Settings.TotalBackground;
+                key.outline.color = pi == 36 ? Settings.KpsOutline : Settings.TotalOutline;
+                key.text.color = pi == 36 ? Settings.KpsText : Settings.TotalText;
+                if (key.value != null) key.value.color = key.text.color;
             }
             if (!Settings.EnablePerKeyColors && raining >= 0)
             {
@@ -696,6 +703,20 @@ namespace JipperKeyViewer.KeyViewer
                     k.text.color = Settings.PerKeyText[pi];
                     if (k.value != null) k.value.color = Settings.PerKeyText[pi];
                 }
+                else if (pi == 36) // KPS
+                {
+                    k.background.color = Settings.KpsBackground;
+                    k.outline.color = Settings.KpsOutline;
+                    k.text.color = Settings.KpsText;
+                    if (k.value != null) k.value.color = Settings.KpsText;
+                }
+                else if (pi == 37) // Total
+                {
+                    k.background.color = Settings.TotalBackground;
+                    k.outline.color = Settings.TotalOutline;
+                    k.text.color = Settings.TotalText;
+                    if (k.value != null) k.value.color = Settings.TotalText;
+                }
                 else
                 {
                     k.background.color = Settings.Background;
@@ -953,7 +974,6 @@ namespace JipperKeyViewer.KeyViewer
             }
             ResetKeyViewer();
             ResetFootKeyViewer();
-            UpdateAllKeyColors();
             SaveSettings();
         }
     }

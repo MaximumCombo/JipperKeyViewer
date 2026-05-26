@@ -80,6 +80,8 @@ namespace JipperKeyViewer.KeyViewer
             ["streamer_mode"] = "Hide KPS/Total",
             ["open_config_folder"] = "Open Config Folder",
             ["open_font_folder"] = "Open Font Folder",
+            ["kps_colors"] = "KPS Colors",
+            ["total_colors"] = "Total Colors",
         };
 
         /// <summary>Chinese translations dictionary / 中文字典</summary>
@@ -145,6 +147,8 @@ namespace JipperKeyViewer.KeyViewer
             ["streamer_mode"] = "隐藏KPS/总计数",
             ["open_config_folder"] = "打开配置文件夹",
             ["open_font_folder"] = "打开字体文件夹",
+            ["kps_colors"] = "KPS 颜色",
+            ["total_colors"] = "Total 颜色",
         };
 
         /// <summary>Korean translations dictionary / 韩文字典</summary>
@@ -210,6 +214,8 @@ namespace JipperKeyViewer.KeyViewer
             ["streamer_mode"] = "KPS/총계 숨기기",
             ["open_config_folder"] = "설정 폴더 열기",
             ["open_font_folder"] = "글꼴 폴더 열기",
+            ["kps_colors"] = "KPS 색상",
+            ["total_colors"] = "Total 색상",
         };
 
         /// <summary>Path to the lang.json override file / lang.json 覆盖文件路径</summary>

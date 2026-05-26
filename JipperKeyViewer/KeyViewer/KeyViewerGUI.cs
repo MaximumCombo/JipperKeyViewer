@@ -463,6 +463,8 @@ namespace JipperKeyViewer.KeyViewer
             if (TextChangeExpanded)
                 DrawTextChangeSection();
 
+            GUILayout.Space(5);
+
             // Color settings section / 颜色设置区域
             bool colorsExpanded = GUILayout.Toggle(ColorExpanded != null, (ColorExpanded != null ? "\u25E2 " : "\u25B6 ") + I18n.Tr("colors"));
             if (colorsExpanded && ColorExpanded == null) ColorExpanded = new bool[9];
@@ -861,12 +863,63 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.EndVertical();
                 }
             }
+            GUILayout.Space(5);
+            DrawKpsTotalColors(36, I18n.Tr("kps_colors"), ref kpsColorType);
+            GUILayout.Space(3);
+            DrawKpsTotalColors(37, I18n.Tr("total_colors"), ref totalColorType);
             GUILayout.EndVertical();
         }
 
-        /// <summary>
-        /// Draw an individual color picker with R/G/B/A sliders and preview / 绘制单个颜色选择器，包含 R/G/B/A 滑块和预览
-        /// </summary>
+        // ===== KPS & Total independent color state =====
+        int kpsColorType = -1;
+        int totalColorType = -1;
+
+        private void DrawKpsTotalColors(int pi, string label, ref int expandedType)
+        {
+            bool show = GUILayout.Toggle(expandedType >= 0, (expandedType >= 0 ? "◢ " : "▶ ") + label);
+            if (show != (expandedType >= 0))
+                expandedType = show ? 0 : -1;
+            if (expandedType < 0) return;
+
+            string[] typeNames = {
+                I18n.Tr("color_bg"), I18n.Tr("color_outline"), I18n.Tr("color_text")
+            };
+            Color[] defaults = { Background, Outline, Text };
+
+            for (int t = 0; t < 3; t++)
+            {
+                bool expanded = GUILayout.Toggle(expandedType == t,
+                    (expandedType == t ? "◢ " : "▶ ") + typeNames[t]);
+                if (expanded != (expandedType == t))
+                    expandedType = expanded ? t : -1;
+                if (expandedType == t)
+                {
+                    GUILayout.BeginVertical("box");
+                    Color cur = pi == 36
+                        ? (t switch { 0 => Settings.KpsBackground, 1 => Settings.KpsOutline, _ => Settings.KpsText })
+                        : (t switch { 0 => Settings.TotalBackground, 1 => Settings.TotalOutline, _ => Settings.TotalText });
+                    Color newColor = DrawColorPicker(typeNames[t], cur, defaults[t]);
+                    if (newColor != cur)
+                    {
+                        if (pi == 36)
+                        {
+                            if (t == 0) Settings.KpsBackground = newColor;
+                            else if (t == 1) Settings.KpsOutline = newColor;
+                            else Settings.KpsText = newColor;
+                        }
+                        else
+                        {
+                            if (t == 0) Settings.TotalBackground = newColor;
+                            else if (t == 1) Settings.TotalOutline = newColor;
+                            else Settings.TotalText = newColor;
+                        }
+                        UpdateAllKeyColors();
+                        SaveSettings();
+                    }
+                    GUILayout.EndVertical();
+                }
+            }
+        }
         private Color DrawColorPicker(string label, Color currentColor, Color defaultColor)
         {
             GUILayout.BeginVertical();
@@ -977,7 +1030,7 @@ namespace JipperKeyViewer.KeyViewer
                 int s = perKeyColorSelected;
                 string keyLabel = s == 36 ? "KPS" : s == 37 ? "Total" : KeyToString(GetKeyCodeForIndex(s));
                 GUILayout.Label("Key " + s + " (" + keyLabel + ")");
-                string rainKey = s < 8 ? "color_rain1" : s < 16 ? "color_rain2" : s < 20 ? "color_rain3" : "color_rain1";
+                string rainKey = s < 8 ? "color_rain1" : s < 16 ? "color_rain2" : s < 20 ? "color_rain3" : "";
 
                 string[] typeNames = {
                     I18n.Tr("color_bg"), I18n.Tr("color_bg_clicked"),
@@ -1029,6 +1082,20 @@ namespace JipperKeyViewer.KeyViewer
                             SaveSettings();
                         }
                         GUILayout.EndVertical();
+                    }
+                }
+
+                // Per-key count reset (main/foot keys only, not KPS/Total)
+                if (s < 36 && Settings.Count != null && s < Settings.Count.Length)
+                {
+                    GUILayout.Space(5);
+                    var redStyle = new GUIStyle(GUI.skin.button) { normal = { textColor = Color.red } };
+                    if (GUILayout.Button(I18n.Tr("reset_counts") + " (" + Settings.Count[s] + ")", redStyle))
+                    {
+                        Settings.Count[s] = 0;
+                        if (Keys != null && s < Keys.Length && Keys[s] != null && Keys[s].value != null)
+                            Keys[s].value.text = "0";
+                        SaveSettings();
                     }
                 }
             }

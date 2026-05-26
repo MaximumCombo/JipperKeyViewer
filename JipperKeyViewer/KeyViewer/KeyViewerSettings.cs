@@ -103,6 +103,16 @@ namespace JipperKeyViewer.KeyViewer
         public Color RainColor2 = KeyViewer.RainColor2;
         public Color RainColor3 = KeyViewer.RainColor3;
 
+        /// <summary>KPS independent colors (used when EnablePerKeyColors is false) / KPS 独立颜色（EnablePerKeyColors 为 false 时使用）</summary>
+        public Color KpsBackground = KeyViewer.Background;
+        public Color KpsOutline = KeyViewer.Outline;
+        public Color KpsText = KeyViewer.Text;
+
+        /// <summary>Total independent colors (used when EnablePerKeyColors is false) / Total 独立颜色（EnablePerKeyColors 为 false 时使用）</summary>
+        public Color TotalBackground = KeyViewer.Background;
+        public Color TotalOutline = KeyViewer.Outline;
+        public Color TotalText = KeyViewer.Text;
+
         /// <summary>Master rain effect toggle / 雨滴效果总开关</summary>
         public bool EnableRainEffect = true;
         /// <summary>Rain fade-out on key release toggle / 雨滴松开淡出开关</summary>
