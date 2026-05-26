@@ -165,6 +165,8 @@ namespace JipperKeyViewer.KeyViewer
         {
             var sw = new Stopwatch();
             sw.Start();
+            // Pre-allocate buffer to avoid allocation in hot loop
+            var changes = new List<KeyValuePair<int, bool>>(32);
 
             while (_running)
             {
@@ -173,6 +175,7 @@ namespace JipperKeyViewer.KeyViewer
                 lock (_lastState)
                 {
                     long now = _stopwatch.ElapsedMilliseconds;
+                    changes.Clear();
                     foreach (var kvp in _lastState)
                     {
                         int vk = kvp.Key;
@@ -181,7 +184,7 @@ namespace JipperKeyViewer.KeyViewer
 
                         if (isDown != wasDown)
                         {
-                            _lastState[vk] = isDown;
+                            changes.Add(new KeyValuePair<int, bool>(vk, isDown));
                             _eventQueue.Enqueue(new KeyEvent
                             {
                                 VKey = vk,
@@ -190,6 +193,9 @@ namespace JipperKeyViewer.KeyViewer
                             });
                         }
                     }
+                    // Apply state changes after enumeration completes
+                    for (int i = 0; i < changes.Count; i++)
+                        _lastState[changes[i].Key] = changes[i].Value;
                 }
 
                 // Spin-wait for precise timing (Thread.Sleep has ~1-15ms granularity)
