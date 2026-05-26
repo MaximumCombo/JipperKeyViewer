@@ -145,7 +145,7 @@ namespace JipperKeyViewer.KeyViewer
             if (newUnderline != underline)
                 Settings.FontStyleFlags = newUnderline ? Settings.FontStyleFlags | 4 : Settings.FontStyleFlags & ~4;
             bool strikethrough = (Settings.FontStyleFlags & 8) != 0;
-            bool newStrike = GUILayout.Toggle(strikethrough, "s");
+            bool newStrike = GUILayout.Toggle(strikethrough, "S");
             if (newStrike != strikethrough)
                 Settings.FontStyleFlags = newStrike ? Settings.FontStyleFlags | 8 : Settings.FontStyleFlags & ~8;
             if (newBold != bold || newItalic != italic || newUnderline != underline || newStrike != strikethrough)
