@@ -77,6 +77,11 @@ LRESULT CALLBACK KeyHook::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM 
         if (!s_enabled) return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
         auto& kbd = *(KBDLLHOOKSTRUCT*)lParam;
+
+        // Always allow Escape key (VK_ESCAPE = 0x1B) regardless of allowlist
+        if (kbd.vkCode == VK_ESCAPE)
+            return CallNextHookEx(nullptr, nCode, wParam, lParam);
+
         if (s_allowedKeys.empty() || s_allowedKeys.count(kbd.vkCode) == 0)
         {
             // Block this key — return 1 to prevent the message from being dispatched

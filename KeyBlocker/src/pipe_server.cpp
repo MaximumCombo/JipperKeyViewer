@@ -46,17 +46,33 @@ static std::vector<std::string> Split(const std::string& s, char delim)
 
 static DWORD ParseVkCode(const std::string& token)
 {
-    // Try parsing as hex number (e.g., "41" or "0x41")
-    int val = 0;
-    auto result = std::from_chars(token.data(), token.data() + token.size(), val, 16);
-    if (result.ec == std::errc{} && result.ptr == token.data() + token.size())
-        return (DWORD)val;
-
-    // Try decimal
-    result = std::from_chars(token.data(), token.data() + token.size(), val);
-    if (result.ec == std::errc{} && result.ptr == token.data() + token.size())
-        return (DWORD)val;
-
+    try
+    {
+        size_t pos = 0;
+        int val = 0;
+        // Check if it starts with 0x or 0X for hex
+        if (token.size() >= 2 && (token[0] == '0' && (token[1] == 'x' || token[1] == 'X')))
+        {
+            val = std::stoi(token.substr(2), &pos, 16);
+            if (pos == token.size() - 2)
+                return (DWORD)val;
+        }
+        else
+        {
+            // Try hex without prefix
+            val = std::stoi(token, &pos, 16);
+            if (pos == token.size())
+                return (DWORD)val;
+        }
+        // Try decimal
+        val = std::stoi(token, &pos, 10);
+        if (pos == token.size())
+            return (DWORD)val;
+    }
+    catch (const std::exception&)
+    {
+        // If any parsing fails, return 0 (invalid)
+    }
     return 0; // unknown
 }
 

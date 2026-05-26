@@ -109,6 +109,7 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_fade"] = "雨滴松开淡出",
             ["fade_duration"] = "淡出时长",
             ["ghost_rain"] = "鬼键雨滴",
+            ["key_blocker"] = "启用按键拦截器",
 
             ["key_change"] = "按键更改",
             ["text_change"] = "文本更改",

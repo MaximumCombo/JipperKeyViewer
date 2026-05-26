@@ -151,6 +151,7 @@ namespace JipperKeyViewer.KeyViewer
         private System.IO.Pipes.NamedPipeClientStream _keyBlockerPipe;
         private System.Threading.Tasks.Task _pipeReaderTask;
         private System.Threading.CancellationTokenSource _pipeCancellationSource;
+        private System.Diagnostics.Process _keyBlockerProcess;
 
         // ======================== Unity Lifecycle / Unity 生命周期 ========================
 
@@ -419,9 +420,11 @@ namespace JipperKeyViewer.KeyViewer
 
         /// <summary>
         /// Initialize the named pipe client to communicate with KeyBlocker native process
+        /// Attempts to connect to existing process, or starts a new one if needed
         /// </summary>
         private void InitializeKeyBlockerPipe()
         {
+            // First try to connect to existing process
             try
             {
                 _keyBlockerPipe = new System.IO.Pipes.NamedPipeClientStream(
@@ -441,21 +444,83 @@ namespace JipperKeyViewer.KeyViewer
                     SendCurrentKeyAllowlist();
 
                     Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker pipe");
+                    return;
                 }
             }
             catch (System.IO.IOException)
             {
-                // Pipe server not running yet - that's OK, we'll retry later
-                Main.Mod.Logger.Log("KeyViewer: KeyBlocker pipe not available, will retry on enable");
+                // Pipe not available, we'll try to start our own process
+                Main.Mod.Logger.Log("KeyViewer: KeyBlocker pipe not available, attempting to start KeyBlocker.exe");
             }
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"KeyViewer: Failed to initialize KeyBlocker pipe: {e.Message}");
             }
+
+            // If we get here, try to start KeyBlocker.exe ourselves
+            try
+            {
+                string modPath = Path.GetDirectoryName(Main.Mod?.Path);
+                string keyBlockerPath = Path.Combine(modPath ?? ".", "KeyBlocker", "KeyBlocker.exe");
+
+                if (File.Exists(keyBlockerPath))
+                {
+                    Main.Mod.Logger.Log($"KeyViewer: Starting KeyBlocker.exe from {keyBlockerPath}");
+                    _keyBlockerProcess = new System.Diagnostics.Process
+                    {
+                        StartInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = keyBlockerPath,
+                            UseShellExecute = false,
+                            CreateNoWindow = true, // Don't show console window
+                            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                        }
+                    };
+                    _keyBlockerProcess.Start();
+
+                    // Give it a moment to start up and create the pipe
+                    System.Threading.Thread.Sleep(500);
+
+                    // Now try to connect to the pipe
+                    _keyBlockerPipe = new System.IO.Pipes.NamedPipeClientStream(
+                        ".",
+                        "JipperKeyBlocker",
+                        System.IO.Pipes.PipeDirection.Out,
+                        System.IO.Pipes.PipeOptions.Asynchronous);
+
+                    _keyBlockerPipe.Connect(2000); // 2 second timeout for started process
+
+                    if (_keyBlockerPipe.IsConnected)
+                    {
+                        _pipeCancellationSource = new System.Threading.CancellationTokenSource();
+                        _pipeReaderTask = System.Threading.Tasks.Task.Run(() => PipeReaderLoop(_pipeCancellationSource.Token));
+
+                        // Send current layout immediately
+                        SendCurrentKeyAllowlist();
+
+                        Main.Mod.Logger.Log("KeyViewer: Connected to KeyBlocker pipe (started process)");
+                        return;
+                    }
+                    else
+                    {
+                        Main.Mod.Logger.Error("KeyViewer: Failed to connect to KeyBlocker pipe after starting process");
+                        CleanupKeyBlockerProcess();
+                    }
+                }
+                else
+                {
+                    Main.Mod.Logger.Error($"KeyViewer: KeyBlocker.exe not found at {keyBlockerPath}");
+                }
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Failed to start KeyBlocker.exe: {e.Message}");
+                CleanupKeyBlockerProcess();
+            }
         }
 
         /// <summary>
-        /// Cleanup the named pipe client
+        /// Cleanup the named pipe client and KeyBlocker process
         /// </summary>
         private void CleanupKeyBlockerPipe()
         {
@@ -485,6 +550,41 @@ namespace JipperKeyViewer.KeyViewer
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker pipe: {e.Message}");
+            }
+
+            // Also cleanup the process if we started it
+            CleanupKeyBlockerProcess();
+        }
+
+        /// <summary>
+        /// Cleanup the KeyBlocker process if we started it
+        /// </summary>
+        private void CleanupKeyBlockerProcess()
+        {
+            try
+            {
+                if (_keyBlockerProcess != null)
+                {
+                    if (!_keyBlockerProcess.HasExited)
+                    {
+                        // Try graceful shutdown first
+                        _keyBlockerProcess.CloseMainWindow();
+
+                        // Wait a bit for graceful exit
+                        if (!_keyBlockerProcess.WaitForExit(2000)) // 2 second timeout
+                        {
+                            // Force kill if it didn't exit gracefully
+                            _keyBlockerProcess.Kill();
+                        }
+                    }
+
+                    _keyBlockerProcess.Dispose();
+                    _keyBlockerProcess = null;
+                }
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"KeyViewer: Error cleaning up KeyBlocker process: {e.Message}");
             }
         }
 
