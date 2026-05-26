@@ -7,10 +7,20 @@ using UnityEngine;
 namespace JipperKeyViewer.KeyViewer
 {
     /// <summary>
-    /// Input processing: key rebinding and display string conversion / 输入处理：按键重绑定和显示字符串转换
+    /// Input processing: async key detection and display string conversion
+    /// Uses AsyncInputManager (GetAsyncKeyState background thread) for frame-rate independent input
     /// </summary>
     public partial class KeyViewer : MonoBehaviour
     {
+        /// <summary>Async input manager — polls keys on background thread at 1000Hz</summary>
+        private AsyncInputManager _asyncInput;
+        /// <summary>Reusable buffer for draining async key events each frame</summary>
+        private readonly List<AsyncInputManager.KeyEvent> _inputEvents = new List<AsyncInputManager.KeyEvent>(64);
+        /// <summary>VK code → key index (0-19 main, 20-35 foot) lookup for O(1) event routing</summary>
+        private Dictionary<int, int> _vkToKeyIndex;
+        /// <summary>Virtual key codes currently tracked by the async input manager</summary>
+        private int[] _trackedVKs;
+
         /// <summary>
         /// Listen for a key press when the user is rebinding a key / 当用户正在重绑定时监听按键按下
         /// Waits for any key down, then assigns it to the SelectedKey / 等待任意键按下，然后分配给 SelectedKey
@@ -131,75 +141,119 @@ namespace JipperKeyViewer.KeyViewer
         // ======================== Input Processing (hot path) / 输入处理（热路径） ========================
 
         /// <summary>
-        /// Check each main key and foot key for state changes (press/release) every frame / 每帧检查每个主键和脚键的状态变化（按下/释放）
+        /// Initialize or reinitialize the async input manager for the current layout.
+        /// Builds VK code → key index mapping and starts the background polling thread.
+        /// </summary>
+        private void InitAsyncInput()
+        {
+            _asyncInput?.Dispose();
+            _asyncInput = null;
+            _vkToKeyIndex = null;
+
+            var mainKeys = GetKeyCode();
+            var footKeys = GetFootKeyCode();
+            int mainLen = mainKeys?.Length ?? 0;
+            int footLen = footKeys?.Length ?? 0;
+
+            var vks = new List<int>(mainLen + footLen);
+            _vkToKeyIndex = new Dictionary<int, int>(mainLen + footLen);
+
+            if (mainKeys != null)
+            {
+                for (int i = 0; i < mainKeys.Length; i++)
+                {
+                    if (AsyncInputManager.KeyCodeToVK.TryGetValue(mainKeys[i], out int vk))
+                    {
+                        vks.Add(vk);
+                        _vkToKeyIndex[vk] = i;
+                    }
+                }
+            }
+            if (footKeys != null)
+            {
+                for (int i = 0; i < footKeys.Length; i++)
+                {
+                    if (AsyncInputManager.KeyCodeToVK.TryGetValue(footKeys[i], out int vk))
+                    {
+                        vks.Add(vk);
+                        _vkToKeyIndex[vk] = i + 20;
+                    }
+                }
+            }
+
+            _trackedVKs = vks.ToArray();
+            _asyncInput = new AsyncInputManager(_trackedVKs, pollHz: 1000);
+            _asyncInput.Start();
+        }
+
+        /// <summary>
+        /// Check each main key and foot key for state changes using async events.
+        /// Events carry precise timestamps from the background thread, independent of frame rate.
         /// </summary>
         private void ProcessMainAndFootKeysInUpdate(long elapsedMilliseconds)
         {
-            if (cachedKeyStyle != Settings.KeyViewerStyle)
+            if (cachedKeyStyle != Settings.KeyViewerStyle || cachedFootStyle != Settings.FootKeyViewerStyle)
             {
-                cachedMainKeys = GetKeyCode();
-                cachedGhostKeys = GetGhostKeyCode();
                 cachedKeyStyle = Settings.KeyViewerStyle;
+                cachedFootStyle = Settings.FootKeyViewerStyle;
+                cachedGhostKeys = GetGhostKeyCode();
                 ghostKeyStates = new bool[cachedGhostKeys.Length];
+                InitAsyncInput();
             }
-            else if (cachedGhostKeys == null)
+            if (cachedGhostKeys == null)
             {
                 cachedGhostKeys = GetGhostKeyCode();
                 ghostKeyStates = new bool[cachedGhostKeys.Length];
             }
-            if (cachedFootStyle != Settings.FootKeyViewerStyle)
+            if (_asyncInput == null) InitAsyncInput();
+
+            // Drain events from the background thread
+            _inputEvents.Clear();
+            _asyncInput.DrainEvents(_inputEvents);
+
+            int[] countArr = Settings.Count;
+            bool rainEnabled = Settings.EnableRainEffect;
+
+            for (int e = 0; e < _inputEvents.Count; e++)
             {
-                cachedFootKeys = GetFootKeyCode();
-                cachedFootStyle = Settings.FootKeyViewerStyle;
+                var evt = _inputEvents[e];
+                if (_vkToKeyIndex == null || !_vkToKeyIndex.TryGetValue(evt.VKey, out int idx))
+                    continue;
+                if (idx >= Keys.Length) continue;
+                Key key = Keys[idx];
+                if (key == null) continue;
+
+                bool current = evt.Pressed;
+                if (current == key.isPressed) continue;
+
+                UpdateKeyColors(idx, current);
+                key.isPressed = current;
+
+                if (current)
+                {
+                    countArr[idx]++;
+                    Settings.TotalCount++;
+                    if (key.value != null && !Settings.EnablePerKeyKps)
+                        key.value.text = FormatCount(countArr[idx]);
+                    // Use the precise timestamp from the background thread
+                    PressTimes.Enqueue(evt.TimestampMs);
+                    if (keyPressTimes != null && idx < keyPressTimes.Length)
+                    {
+                        if (keyPressTimes[idx] == null) keyPressTimes[idx] = new Queue<long>();
+                        keyPressTimes[idx].Enqueue(evt.TimestampMs);
+                    }
+                    if (rainEnabled) rainSystem.TriggerRainEffect(idx, key);
+                }
+                else
+                {
+                    if (rainEnabled) rainSystem.ReleaseRainEffect(idx, key);
+                }
             }
-            ProcessKeyGroup(cachedMainKeys, 0, elapsedMilliseconds);
-            if (cachedFootKeys != null)
-                ProcessKeyGroup(cachedFootKeys, 20, elapsedMilliseconds);
+
             if (Total != null && Total.value != null && lastTotal != Settings.TotalCount)
             {
                 lastTotal = Settings.TotalCount;
                 Total.value.text = FormatCount(lastTotal);
-            }
-        }
-
-        /// <summary>
-        /// Process a group of keys for input state changes / 处理一组按键的输入状态变化
-        /// Local-caches Settings references for hot-path performance / 局部缓存 Settings 引用以优化热路径性能
-        /// </summary>
-        private void ProcessKeyGroup(KeyCode[] keyCodes, int baseIndex, long elapsedMs)
-        {
-            int[] countArr = Settings.Count;
-            bool rainEnabled = Settings.EnableRainEffect;
-            for (int i = 0; i < keyCodes.Length; i++)
-            {
-                int idx = baseIndex + i;
-                if (idx >= Keys.Length) continue;
-                Key key = Keys[idx];
-                if (key == null) continue;
-                bool current = Input.GetKey(keyCodes[i]);
-                if (current != key.isPressed)
-                {
-                    UpdateKeyColors(idx, current);
-                    key.isPressed = current;
-                    if (current)
-                    {
-                        countArr[idx]++;
-                        Settings.TotalCount++;
-                        if (key.value != null && !Settings.EnablePerKeyKps)
-                            key.value.text = FormatCount(countArr[idx]);
-                        PressTimes.Enqueue(elapsedMs);
-                        if (keyPressTimes != null && idx < keyPressTimes.Length)
-                        {
-                            if (keyPressTimes[idx] == null) keyPressTimes[idx] = new Queue<long>();
-                            keyPressTimes[idx].Enqueue(elapsedMs);
-                        }
-                        if (rainEnabled) rainSystem.TriggerRainEffect(idx, key);
-                    }
-                    else
-                    {
-                        if (rainEnabled) rainSystem.ReleaseRainEffect(idx, key);
-                    }
-                }
             }
         }
 
@@ -242,8 +296,8 @@ namespace JipperKeyViewer.KeyViewer
         }
 
         /// <summary>
-        /// Process ghost key inputs — secondary keys that only trigger rain, no display/count / 处理鬼键输入 — 仅触发雨滴的副按键，无显示/计数
-        /// ghostKeyStates is guaranteed non-null and same length as cachedGhostKeys (initialized in ProcessMainAndFootKeysInUpdate before this runs) / ghostKeyStates 保证非空且长度与 cachedGhostKeys 相同（在此方法之前由 ProcessMainAndFootKeysInUpdate 初始化）
+        /// Process ghost key inputs using async events.
+        /// Ghost keys only trigger rain, no display or count.
         /// </summary>
         private void ProcessGhostKeysInUpdate()
         {
@@ -252,12 +306,14 @@ namespace JipperKeyViewer.KeyViewer
             bool ghostRainEnabled = Settings.EnableGhostRain;
             if (!rainEnabled || !ghostRainEnabled) return;
 
+            // Check ghost keys using GetAsyncKeyState (instant, not frame-dependent)
             KeyCode[] ghosts = cachedGhostKeys;
             for (int i = 0; i < ghosts.Length; i++)
             {
                 if (ghosts[i] == KeyCode.None) continue;
+                if (!AsyncInputManager.KeyCodeToVK.TryGetValue(ghosts[i], out int vk)) continue;
 
-                bool current = Input.GetKey(ghosts[i]);
+                bool current = AsyncInputManager.IsKeyDown(vk);
                 if (current != ghostKeyStates[i])
                 {
                     ghostKeyStates[i] = current;

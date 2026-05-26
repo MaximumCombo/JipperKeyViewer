@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Linked shared source files / 共享源文件链接 -->
+    <Compile Include="..\JipperKeyViewer\KeyViewer\AsyncInputManager.cs" Link="KeyViewer\AsyncInputManager.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\FootKeyviewerStyle.cs" Link="KeyViewer\FootKeyviewerStyle.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\I18n.cs" Link="KeyViewer\I18n.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\Key.cs" Link="KeyViewer\Key.cs" />

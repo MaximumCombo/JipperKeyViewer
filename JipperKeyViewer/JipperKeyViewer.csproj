@@ -92,6 +92,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KeyViewer\AsyncInputManager.cs" />
     <Compile Include="KeyViewer\FootKeyviewerStyle.cs" />
     <Compile Include="KeyViewer\I18n.cs" />
     <Compile Include="KeyViewer\Key.cs" />

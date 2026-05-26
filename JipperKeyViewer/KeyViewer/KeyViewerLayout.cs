@@ -69,6 +69,7 @@ namespace JipperKeyViewer.KeyViewer
             lastPerKeyKps = new int[36];
             Stopwatch = System.Diagnostics.Stopwatch.StartNew();
             RefreshAllCountDisplay();
+            InitAsyncInput();
         }
 
         /// <summary>
@@ -77,6 +78,9 @@ namespace JipperKeyViewer.KeyViewer
         private void DisableKeyViewer()
         {
             if (KeyViewerObject == null) return;
+            _asyncInput?.Dispose();
+            _asyncInput = null;
+            _vkToKeyIndex = null;
             Object.Destroy(KeyViewerObject);
             KeyViewerObject = null;
             KeyViewerSizeObject = null;

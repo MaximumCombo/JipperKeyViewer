@@ -122,12 +122,8 @@ namespace JipperKeyViewer.KeyViewer
         private static readonly KeyCode[] AllKeyCodes;
         /// <summary>Cached current style to avoid redundant GetKeyCode calls / 缓存当前样式，避免重复调用 GetKeyCode</summary>
         private KeyviewerStyle cachedKeyStyle = (KeyviewerStyle)(-1);
-        /// <summary>Cached main key array / 缓存的主按键数组</summary>
-        private KeyCode[] cachedMainKeys;
         /// <summary>Cached current foot style / 缓存当前的脚键样式</summary>
         private FootKeyviewerStyle cachedFootStyle = (FootKeyviewerStyle)(-1);
-        /// <summary>Cached foot key array / 缓存的脚键数组</summary>
-        private KeyCode[] cachedFootKeys;
         /// <summary>Cached ghost key array / 缓存的鬼键数组</summary>
         private KeyCode[] cachedGhostKeys;
         /// <summary>Ghost key press state tracking / 鬼键按下状态跟踪</summary>
@@ -208,6 +204,8 @@ namespace JipperKeyViewer.KeyViewer
         {
             SaveSettings();
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            _asyncInput?.Dispose();
+            _asyncInput = null;
             rainSystem?.ClearAll(Keys);
             foreach (var mat in shadowMaterials.Values)
                 Destroy(mat);
