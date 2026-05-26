@@ -126,8 +126,34 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(I18n.Tr("custom_font_tip"));
                 GUILayout.Label($"CustomFont : {Path.Combine(Path.GetDirectoryName(Main.Mod?.Path) ?? ".", "CustomFont")}");
-                GUILayout.EndVertical();
+                                GUILayout.EndVertical();
             }
+
+            // Font style toggles / 字体样式开关
+            GUILayout.Space(3);
+            GUILayout.BeginHorizontal();
+            bool bold = (Settings.FontStyleFlags & 1) != 0;
+            bool newBold = GUILayout.Toggle(bold, "B");
+            if (newBold != bold)
+                Settings.FontStyleFlags = newBold ? Settings.FontStyleFlags | 1 : Settings.FontStyleFlags & ~1;
+            bool italic = (Settings.FontStyleFlags & 2) != 0;
+            bool newItalic = GUILayout.Toggle(italic, "I");
+            if (newItalic != italic)
+                Settings.FontStyleFlags = newItalic ? Settings.FontStyleFlags | 2 : Settings.FontStyleFlags & ~2;
+            bool underline = (Settings.FontStyleFlags & 4) != 0;
+            bool newUnderline = GUILayout.Toggle(underline, "U");
+            if (newUnderline != underline)
+                Settings.FontStyleFlags = newUnderline ? Settings.FontStyleFlags | 4 : Settings.FontStyleFlags & ~4;
+            bool strikethrough = (Settings.FontStyleFlags & 8) != 0;
+            bool newStrike = GUILayout.Toggle(strikethrough, "S");
+            if (newStrike != strikethrough)
+                Settings.FontStyleFlags = newStrike ? Settings.FontStyleFlags | 8 : Settings.FontStyleFlags & ~8;
+            if (newBold != bold || newItalic != italic || newUnderline != underline || newStrike != strikethrough)
+            {
+                UpdateAllFonts();
+                SaveSettings();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.Space(3);
             GUILayout.BeginHorizontal();

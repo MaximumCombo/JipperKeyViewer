@@ -144,11 +144,13 @@ namespace JipperKeyViewer.KeyViewer
             TMP_FontAsset currentFont = GetCurrentFont();
             if (currentFont == null) return;
             Material shadowMat = GetShadowMaterial(currentFont);
+            FontStyles style = (FontStyles)Settings.FontStyleFlags;
             void UpdateText(TMP_Text t)
             {
                 if (t == null) return;
                 t.font = currentFont;
                 t.fontMaterial = shadowMat;
+                t.fontStyle = style;
             }
             if (Keys != null)
             {

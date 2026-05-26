@@ -143,6 +143,8 @@ namespace JipperKeyViewer.KeyViewer
         public int FontIndex = 1;
         /// <summary>Font name for persistence across scene loads / 用于跨场景持久化的字体名称</summary>
         public string FontName = "";
+        /// <summary>Font style flags (FontStyles as int for serialization) / 字体样式标志</summary>
+        public int FontStyleFlags = 0;
         /// <summary>Language code / 语言代码</summary>
         public string Language = "en";
 
