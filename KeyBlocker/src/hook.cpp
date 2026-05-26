@@ -1,6 +1,12 @@
 #include "hook.h"
 
 KeyHook* KeyHook::s_instance = nullptr;
+HHOOK KeyHook::s_hHook = nullptr;
+bool KeyHook::s_enabled = true;
+std::unordered_set<DWORD> KeyHook::s_allowedKeys;
+DWORD KeyHook::s_blockedCount = 0;
+std::mutex KeyHook::s_mutex;
+volatile LONG KeyHook::s_pendingUninstall = 0;
 
 KeyHook::~KeyHook()
 {
