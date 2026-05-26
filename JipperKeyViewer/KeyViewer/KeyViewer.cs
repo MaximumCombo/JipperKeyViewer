@@ -140,6 +140,7 @@ namespace JipperKeyViewer.KeyViewer
         static readonly List<FontEntry> fontList = new List<FontEntry>();
         /// <summary>Whether the font selection list is expanded in settings / 设置中字体选择列表是否展开</summary>
         bool fontListExpanded;
+        bool fontStyleExpanded;
         /// <summary>Whether the overlay was enabled last frame (for toggle detection) / 上一帧覆盖层是否启用（用于开关检测）</summary>
         private bool wasEnabled;
         /// <summary>Whether the font has been restored after scene load / 场景加载后字体是否已恢复</summary>

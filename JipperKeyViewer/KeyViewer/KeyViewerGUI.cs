@@ -129,31 +129,44 @@ namespace JipperKeyViewer.KeyViewer
                                 GUILayout.EndVertical();
             }
 
-            // Font style toggles / 字体样式开关
+            // Font style foldout / 字体样式折叠列表
             GUILayout.Space(3);
-            GUILayout.BeginHorizontal();
-            bool bold = (Settings.FontStyleFlags & 1) != 0;
-            bool newBold = GUILayout.Toggle(bold, "B");
-            if (newBold != bold)
-                Settings.FontStyleFlags = newBold ? Settings.FontStyleFlags | 1 : Settings.FontStyleFlags & ~1;
-            bool italic = (Settings.FontStyleFlags & 2) != 0;
-            bool newItalic = GUILayout.Toggle(italic, "I");
-            if (newItalic != italic)
-                Settings.FontStyleFlags = newItalic ? Settings.FontStyleFlags | 2 : Settings.FontStyleFlags & ~2;
-            bool underline = (Settings.FontStyleFlags & 4) != 0;
-            bool newUnderline = GUILayout.Toggle(underline, "U");
-            if (newUnderline != underline)
-                Settings.FontStyleFlags = newUnderline ? Settings.FontStyleFlags | 4 : Settings.FontStyleFlags & ~4;
-            bool strikethrough = (Settings.FontStyleFlags & 8) != 0;
-            bool newStrike = GUILayout.Toggle(strikethrough, "S");
-            if (newStrike != strikethrough)
-                Settings.FontStyleFlags = newStrike ? Settings.FontStyleFlags | 8 : Settings.FontStyleFlags & ~8;
-            if (newBold != bold || newItalic != italic || newUnderline != underline || newStrike != strikethrough)
+            string styleSummary = BuildFontStyleSummary();
+            fontStyleExpanded = GUILayout.Toggle(fontStyleExpanded, (fontStyleExpanded ? "◢ " : "▶ ") + I18n.Tr("font_style") + ": " + styleSummary);
+            if (fontStyleExpanded)
             {
-                UpdateAllFonts();
-                SaveSettings();
+                string[] styleNames = { "Bold", "Italic", "Underline", "Lowercase", "Uppercase", "SmallCaps", "Strikethrough", "Superscript", "Subscript" };
+                int[] styleFlags = { 1, 2, 4, 8, 16, 32, 64, 128, 256 };
+                int[] styleGroups = { 0, 0, 0, 1, 1, 1, 0, 2, 2 };
+                bool changed = false;
+                for (int i = 0; i < styleFlags.Length; i++)
+                {
+                    bool active = (Settings.FontStyleFlags & styleFlags[i]) != 0;
+                    bool newActive = GUILayout.Toggle(active, styleNames[i]);
+                    if (newActive != active)
+                    {
+                        if (newActive)
+                        {
+                            // Clear mutually exclusive group mates / 清除互斥组内其他选项
+                            if (styleGroups[i] == 1)
+                            {
+                                Settings.FontStyleFlags &= ~(8 | 16 | 32); // clear Lowercase, Uppercase, SmallCaps
+                            }
+                            else if (styleGroups[i] == 2)
+                            {
+                                Settings.FontStyleFlags &= ~(128 | 256); // clear Superscript, Subscript
+                            }
+                        }
+                        Settings.FontStyleFlags = newActive ? Settings.FontStyleFlags | styleFlags[i] : Settings.FontStyleFlags & ~styleFlags[i];
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    UpdateAllFonts();
+                    SaveSettings();
+                }
             }
-            GUILayout.EndHorizontal();
 
             GUILayout.Space(3);
             GUILayout.BeginHorizontal();
@@ -1178,6 +1191,24 @@ namespace JipperKeyViewer.KeyViewer
             int fi = idx - 20;
             if (foot != null && fi >= 0 && fi < foot.Length) return foot[fi];
             return KeyCode.None;
+        }
+
+        /// <summary>Build a compact summary string of active font styles / 构建当前字体样式的简短摘要</summary>
+        private string BuildFontStyleSummary()
+        {
+            int f = Settings.FontStyleFlags;
+            if (f == 0) return "Normal";
+            var parts = new System.Collections.Generic.List<string>();
+            if ((f & 1) != 0) parts.Add("B");
+            if ((f & 2) != 0) parts.Add("I");
+            if ((f & 4) != 0) parts.Add("U");
+            if ((f & 8) != 0) parts.Add("Lc");
+            if ((f & 16) != 0) parts.Add("Uc");
+            if ((f & 32) != 0) parts.Add("Sc");
+            if ((f & 64) != 0) parts.Add("St");
+            if ((f & 128) != 0) parts.Add("Sup");
+            if ((f & 256) != 0) parts.Add("Sub");
+            return string.Join(" ", parts);
         }
     }
 }
