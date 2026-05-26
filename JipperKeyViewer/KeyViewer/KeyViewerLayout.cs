@@ -382,6 +382,7 @@ namespace JipperKeyViewer.KeyViewer
                     var mat = GetShadowMaterial(countFont);
                     if (mat != null) text.fontMaterial = mat;
                 }
+                text.fontStyle = (FontStyles)settings.FontStyleFlags;
                 text.enableAutoSizing = true;
                 text.fontSizeMin = 0;
                 text.fontSizeMax = 20;
