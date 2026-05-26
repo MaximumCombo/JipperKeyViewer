@@ -67,7 +67,7 @@ namespace JipperKeyViewer.KeyViewer
             PressTimes = new Queue<long>();
             keyPressTimes = new Queue<long>[36];
             lastPerKeyKps = new int[36];
-            Stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch = AsyncInputManager.SharedStopwatch;
             RefreshAllCountDisplay();
             InitAsyncInput();
         }

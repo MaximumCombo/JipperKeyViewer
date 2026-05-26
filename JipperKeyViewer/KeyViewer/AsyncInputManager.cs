@@ -77,11 +77,13 @@ namespace JipperKeyViewer.KeyViewer
 
         private readonly ConcurrentQueue<KeyEvent> _eventQueue = new ConcurrentQueue<KeyEvent>();
         private readonly Dictionary<int, bool> _lastState = new Dictionary<int, bool>();
-        private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
         private Thread _pollThread;
         private volatile bool _running;
         private readonly int[] _trackedVKeys;
         private readonly int _pollIntervalUs; // microseconds
+
+        /// <summary>Shared high-resolution stopwatch for all timestamp sources</summary>
+        public static readonly Stopwatch SharedStopwatch = Stopwatch.StartNew();
 
         /// <summary>
         /// Create a new AsyncInputManager.
@@ -174,7 +176,7 @@ namespace JipperKeyViewer.KeyViewer
 
                 lock (_lastState)
                 {
-                    long now = _stopwatch.ElapsedMilliseconds;
+                    long now = SharedStopwatch.ElapsedMilliseconds;
                     changes.Clear();
                     foreach (var kvp in _lastState)
                     {
