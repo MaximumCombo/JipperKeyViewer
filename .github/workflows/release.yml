@@ -116,7 +116,7 @@ jobs:
 
       - name: Create GitHub Release (manual dispatch)
         if: steps.body.outputs.has_body == '1'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.version }}
           body_path: dist/release-body.md
@@ -129,7 +129,7 @@ jobs:
 
       - name: Create GitHub Release (tag push)
         if: steps.body.outputs.has_body == '0'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true

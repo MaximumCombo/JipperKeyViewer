@@ -56,13 +56,13 @@ jobs:
           Copy-Item JipperKeyViewer-FileBased\assets\* $dist\assets\
 
       - name: Upload JipperKeyViewer (AssetBundle)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: JipperKeyViewer-AssetBundle
           path: dist/JipperKeyViewer/
 
       - name: Upload JipperKeyViewer-FileBased
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: JipperKeyViewer-FileBased
           path: dist/JipperKeyViewer-FileBased/
