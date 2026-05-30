@@ -94,6 +94,7 @@
   <ItemGroup>
     <Compile Include="KeyViewer\FootKeyviewerStyle.cs" />
     <Compile Include="KeyViewer\I18n.cs" />
+    <Compile Include="KeyViewer\InputSystem.cs" />
     <Compile Include="KeyViewer\Key.cs" />
     <Compile Include="KeyViewer\KeyViewer.cs" />
     <Compile Include="KeyViewer\KeyViewerGUI.cs" />
@@ -109,7 +110,9 @@
     <Compile Include="Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>start XCOPY /Y /R "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice\Mods\$(ProjectName)\$(ProjectName).dll*"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

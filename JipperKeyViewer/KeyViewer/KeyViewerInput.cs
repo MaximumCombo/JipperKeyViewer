@@ -1,6 +1,7 @@
 // Key detection and rebinding logic / 按键检测和重新绑定逻辑
 // Handles listening for new key presses during rebinding and converting KeyCodes to display strings / 处理重绑定期间监听新按键，以及将 KeyCode 转换为显示字符串
 
+using JipperKeyViewer.Input;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -43,11 +44,11 @@ namespace JipperKeyViewer.KeyViewer
         private void ProcessKeySelection()
         {
             if (SelectedKey == -1 || changeState == 1 || !Application.isFocused) return;
-            if (!Input.anyKeyDown) return;
+            if (!InputSystem.anyKeyDown) return;
 
             foreach (KeyCode keyCode in AllKeyCodes)
             {
-                if (Input.GetKeyDown(keyCode))
+                if (InputSystem.GetKeyDown(keyCode))
                 {
                     SetupKey(keyCode);
                     return;
@@ -218,7 +219,7 @@ namespace JipperKeyViewer.KeyViewer
                 if (idx >= Keys.Length) continue;
                 Key key = Keys[idx];
                 if (key == null) continue;
-                bool current = Input.GetKey(keyCodes[i]);
+                bool current = InputSystem.GetKey(keyCodes[i]);
                 if (current != key.isPressed)
                 {
                     UpdateKeyColors(idx, current);
@@ -313,7 +314,7 @@ namespace JipperKeyViewer.KeyViewer
             {
                 if (ghosts[i] == KeyCode.None) continue;
 
-                bool current = Input.GetKey(ghosts[i]);
+                bool current = InputSystem.GetKey(ghosts[i]);
                 if (current != ghostKeyStates[i])
                 {
                     ghostKeyStates[i] = current;
