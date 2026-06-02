@@ -25,10 +25,10 @@ jobs:
         with:
           fetch-depth: 0
 
-    - name: Restore game DLLs from git history
-      run: git checkout 1.6.0 -- libs/
+      - name: Restore game DLLs from git history
+        run: git checkout 1.6.0 -- libs/
 
-    - name: Setup MSBuild
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
 
       - name: Restore NuGet packages
