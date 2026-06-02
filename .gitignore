@@ -363,4 +363,9 @@ MigrationBackup/
 FodyWeavers.xsd
 library
 UserSettings
+Templibs
+/
+
 Temp
+
+libs/
