@@ -495,6 +495,31 @@ namespace JipperKeyViewer.KeyViewer
                     GUILayout.EndHorizontal();
                 }
 
+                // Rain gradient toggle / 雨滴渐隐开关
+                GUILayout.Space(5);
+                bool newGradient = GUILayout.Toggle(Settings.EnableRainGradient, I18n.Tr("rain_gradient"));
+                if (newGradient != Settings.EnableRainGradient)
+                {
+                    Settings.EnableRainGradient = newGradient;
+                    SaveSettings();
+                }
+                if (Settings.EnableRainGradient)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(I18n.Tr("gradient_percent") + ":", GUILayout.Width(60));
+                    float newFadePx = GUILayout.HorizontalSlider(Settings.RainFadePx, 1f, 200f, GUILayout.Width(120));
+                    string fadePxText = GUILayout.TextField(newFadePx.ToString("F0"), GUILayout.Width(40));
+                    if (float.TryParse(fadePxText, out float parsedPx))
+                        newFadePx = Mathf.Clamp(parsedPx, 1f, 200f);
+                    GUILayout.Label("px");
+                    if (!Mathf.Approximately(newFadePx, Settings.RainFadePx))
+                    {
+                        Settings.RainFadePx = newFadePx;
+                        SaveSettings();
+                    }
+                    GUILayout.EndHorizontal();
+                }
+
                 // Ghost rain toggle / 鬼键雨滴开关
                 GUILayout.Space(5);
                 bool newGhostRain = GUILayout.Toggle(Settings.EnableGhostRain, I18n.Tr("ghost_rain"));

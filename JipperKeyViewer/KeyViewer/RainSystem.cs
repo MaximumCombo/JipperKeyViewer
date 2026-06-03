@@ -16,13 +16,12 @@ namespace JipperKeyViewer.KeyViewer
         private const int MAX_RAWRAIN_POOL_SIZE = 60;
         private const int MAX_POOL_SIZE = 30;
 
+        public Sprite GhostRainSprite { get; set; }
+
         private readonly float[] rowSpeeds = new float[3];
         private readonly float[] rowHeights = new float[3];
         private float cachedRainSpeed1, cachedRainSpeed2, cachedRainSpeed3;
         private float cachedRainHeight1, cachedRainHeight2, cachedRainHeight3;
-
-        /// <summary>Sprite used for ghost rain tiled rendering / 鬼雨 tiled 渲染用的精灵</summary>
-        public Sprite GhostRainSprite;
 
         public RainSystem(KeyViewerSettings settings)
         {
@@ -106,14 +105,30 @@ namespace JipperKeyViewer.KeyViewer
                         float t = Mathf.Clamp01(r.fadeTimer / fadeDuration);
                         float eased = t * (2f - t);
                         float a = 1f - eased;
-                        var c = r.image.color;
+                        var c = r.graphic.color;
                         c.a = a;
-                        r.image.color = c;
+                        r.graphic.color = c;
                         if (t >= 1f)
                         {
                             ReturnRainAndRawRain(rain, key, j);
                         }
                     }
+
+                    float trailEdgeDist = rain.elapsedMs * rowSpeeds[row];
+                    float drawH;
+                    if (trailEdgeDist > rowHeights[row])
+                    {
+                        drawH = rain.FinalSize.y - trailEdgeDist + rowHeights[row];
+                        trailEdgeDist = rowHeights[row];
+                    }
+                    else
+                    {
+                        drawH = rain.growing ? trailEdgeDist : rain.FinalSize.y;
+                    }
+                    float dFar = trailEdgeDist;
+                    float dNear = dFar - drawH;
+                    float fp = settings.EnableRainGradient && !rain.isGhost ? settings.RainFadePx : 0f;
+                    r.graphic.SetFadeParams(dNear, dFar, rowHeights[row], fp, false);
                 }
             }
         }
@@ -222,7 +237,25 @@ namespace JipperKeyViewer.KeyViewer
             };
         }
 
-        public Rain GetRainFromPool(Transform parent, Sprite sprite = null, bool isTiled = false)
+        public Rain GetRainFromPool(Transform parent)
+        {
+            Rain r;
+            if (rainPool.Count > 0)
+            {
+                r = rainPool.Pop();
+                r.Init(parent);
+            }
+            else
+            {
+                GameObject go = new GameObject("Rain");
+                go.AddComponent<RectTransform>();
+                r = go.AddComponent<Rain>();
+                r.Init(parent);
+            }
+            return r;
+        }
+
+        public Rain GetRainFromPool(Transform parent, Sprite sprite, bool isTiled)
         {
             Rain r;
             if (rainPool.Count > 0)
@@ -290,17 +323,23 @@ namespace JipperKeyViewer.KeyViewer
         {
             if (key == null || key.rain == null) return;
 
-            Sprite rainSprite = isGhost ? GhostRainSprite : null;
-            bool isTiled = isGhost;
             RawRain rawRain = GetRawRain(key.color);
-            Rain rainComponent = GetRainFromPool(key.rain.transform, rainSprite, isTiled);
+            Rain rainComponent;
+            if (isGhost)
+            {
+                rainComponent = GetRainFromPool(key.rain.transform, GhostRainSprite, true);
+                rainComponent.ghostImage.color = GetGhostRainColor(key.color);
+                rainComponent.transform.SetAsLastSibling();
+            }
+            else
+            {
+                rainComponent = GetRainFromPool(key.rain.transform);
+                rainComponent.graphic.color = key.rainColor;
+            }
             rainComponent.rawRain = rawRain;
             rawRain.rainComponent = rainComponent;
             rawRain.isGhost = isGhost;
             rawRain.growing = true;
-            rainComponent.image.color = isGhost ? GetGhostRainColor(key.color) : key.rainColor;
-            if (isGhost)
-                rainComponent.transform.SetAsLastSibling();
 
             key.rainList.Add(rawRain);
 

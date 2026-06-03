@@ -100,6 +100,7 @@
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyViewerSettings.cs" Link="KeyViewer\KeyViewerSettings.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\KeyviewerStyle.cs" Link="KeyViewer\KeyviewerStyle.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\Rain.cs" Link="KeyViewer\Rain.cs" />
+    <Compile Include="..\JipperKeyViewer\KeyViewer\RainGraphic.cs" Link="KeyViewer\RainGraphic.cs" />
     <Compile Include="..\JipperKeyViewer\KeyViewer\RawRain.cs" Link="KeyViewer\RawRain.cs" />
     <Compile Include="..\JipperKeyViewer\Main.cs" Link="Main.cs" />
     <!-- File-based resource loading (replaces AssetBundle version) / 基于文件的资源加载（替代 AssetBundle 版本） -->

@@ -40,6 +40,8 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_fade"] = "Release Fade",
             ["fade_duration"] = "Fade Duration",
             ["ghost_rain"] = "Ghost Rain",
+            ["rain_gradient"] = "Edge Fade",
+            ["gradient_percent"] = "Fade px",
 
             ["key_change"] = "Key Change",
             ["text_change"] = "Text Change",
@@ -108,6 +110,8 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_fade"] = "雨滴松开淡出",
             ["fade_duration"] = "淡出时长",
             ["ghost_rain"] = "鬼键雨滴",
+            ["rain_gradient"] = "顶部渐隐",
+            ["gradient_percent"] = "渐隐像素",
 
             ["key_change"] = "按键更改",
             ["text_change"] = "文本更改",
@@ -176,6 +180,8 @@ namespace JipperKeyViewer.KeyViewer
             ["rain_fade"] = "빗줄 페이드아웃",
             ["fade_duration"] = "페이드 시간",
             ["ghost_rain"] = "고스트 빗줄",
+            ["rain_gradient"] = "끝 페이드",
+            ["gradient_percent"] = "페이드 px",
 
             ["key_change"] = "키 변경",
             ["text_change"] = "텍스트 변경",

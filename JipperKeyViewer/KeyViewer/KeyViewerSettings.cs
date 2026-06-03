@@ -121,6 +121,10 @@ namespace JipperKeyViewer.KeyViewer
         public bool EnableGhostRain = false;
         /// <summary>Duration of rain top-fade (seconds) / 雨滴顶部渐隐时长（秒）</summary>
         public float RainFadeDuration = 0.5f;
+        /// <summary>Rain drop gradient fade toggle / 雨滴渐隐开关</summary>
+        public bool EnableRainGradient = false;
+        /// <summary>Rain gradient fade zone in pixels (from top of track) / 雨滴渐隐像素（从轨道顶部开始）</summary>
+        public float RainFadePx = 40f;
         /// <summary>Per-row rain toggles / 每排雨滴独立开关</summary>
         public bool EnableRainForRow1 = true;
         public bool EnableRainForRow2 = true;

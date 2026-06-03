@@ -62,6 +62,8 @@
     { "key": "kps_colors", "en": "KPS Colors", "zh": "KPS 颜色", "ko": "KPS 색상" },
     { "key": "total_colors", "en": "Total Colors", "zh": "Total 颜色", "ko": "Total 색상" },
     { "key": "open_config_folder", "en": "Open Config Folder", "zh": "打开配置文件夹", "ko": "설정 폴더 열기" },
-    { "key": "open_font_folder", "en": "Open Font Folder", "zh": "打开字体文件夹", "ko": "글꼴 폴더 열기" }
+    { "key": "open_font_folder", "en": "Open Font Folder", "zh": "打开字体文件夹", "ko": "글꼴 폴더 열기" },
+    { "key": "rain_gradient", "en": "Rain Gradient Fade", "zh": "雨滴渐隐", "ko": "빗줄 그라데이션" },
+    { "key": "gradient_percent", "en": "Fade px", "zh": "渐隐像素", "ko": "페이드 px" }
   ]
 }
