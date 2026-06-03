@@ -631,6 +631,9 @@ namespace JipperKeyViewer.KeyViewer
                 6 => Settings.RainColor,
                 7 => Settings.RainColor2,
                 8 => Settings.RainColor3,
+                9 => Settings.GhostRainColor,
+                10 => Settings.GhostRainColor2,
+                11 => Settings.GhostRainColor3,
                 _ => Color.white
             };
         }
@@ -649,6 +652,9 @@ namespace JipperKeyViewer.KeyViewer
                 case 6: Settings.RainColor = color; break;
                 case 7: Settings.RainColor2 = color; break;
                 case 8: Settings.RainColor3 = color; break;
+                case 9: Settings.GhostRainColor = color; break;
+                case 10: Settings.GhostRainColor2 = color; break;
+                case 11: Settings.GhostRainColor3 = color; break;
             }
         }
 

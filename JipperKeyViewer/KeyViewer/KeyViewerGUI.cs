@@ -531,8 +531,6 @@ namespace JipperKeyViewer.KeyViewer
                     SaveSettings();
                 }
 
-                if (Settings.EnableGhostRain)
-                    DrawGhostRainColorSettings();
             }
 
             GUILayout.Space(10);
@@ -559,7 +557,7 @@ namespace JipperKeyViewer.KeyViewer
 
             // Color settings section / 颜色设置区域
             bool colorsExpanded = GUILayout.Toggle(ColorExpanded != null, (ColorExpanded != null ? "\u25E2 " : "\u25B6 ") + I18n.Tr("colors"));
-            if (colorsExpanded && ColorExpanded == null) ColorExpanded = new bool[9];
+            if (colorsExpanded && ColorExpanded == null) ColorExpanded = new bool[12];
             if (!colorsExpanded) ColorExpanded = null;
             if (ColorExpanded != null)
             {
@@ -919,62 +917,26 @@ namespace JipperKeyViewer.KeyViewer
             GUILayout.EndVertical();
         }
 
-        /// <summary>
-        /// Draw the color settings section / 绘制颜色设置区域
-        /// RGB-A sliders with preview and reset buttons for each color / 每个颜色的 R/G/B/A 滑块、预览和重置按钮
-        /// </summary>
-        private void DrawGhostRainColorSettings()
-        {
-            GUILayout.BeginVertical("box");
-            string[] rowNames = { I18n.Tr("rain_row1"), I18n.Tr("rain_row2"), I18n.Tr("rain_row3") };
-            Color[] ghostColors = { Settings.GhostRainColor, Settings.GhostRainColor2, Settings.GhostRainColor3 };
-            Color[] ghostDefaults = { GhostRainColorDefault, GhostRainColor2Default, GhostRainColor3Default };
-
-            int rowCount = Settings.KeyViewerStyle == KeyviewerStyle.Key20 ? 3 : 2;
-            for (int r = 0; r < rowCount; r++)
-            {
-                bool expanded = GUILayout.Toggle(ghostRainColorExpanded == r,
-                    (ghostRainColorExpanded == r ? "\u25E2 " : "\u25B6 ") + I18n.Tr("ghost_rain") + " " + rowNames[r]);
-                if (expanded != (ghostRainColorExpanded == r))
-                    ghostRainColorExpanded = expanded ? r : -1;
-
-                if (ghostRainColorExpanded == r)
-                {
-                    GUILayout.BeginVertical("box");
-                    Color cur = ghostColors[r];
-                    Color newColor = DrawColorPicker(rowNames[r], cur, ghostDefaults[r]);
-                    if (newColor != cur)
-                    {
-                        switch (r)
-                        {
-                            case 0: Settings.GhostRainColor = newColor; break;
-                            case 1: Settings.GhostRainColor2 = newColor; break;
-                            case 2: Settings.GhostRainColor3 = newColor; break;
-                        }
-                        SaveSettings();
-                    }
-                    GUILayout.EndVertical();
-                }
-            }
-            GUILayout.EndVertical();
-        }
-
         private void DrawColorSettings()
         {
             GUILayout.BeginVertical("box");
             string[] colorNames = {
                 I18n.Tr("color_bg"), I18n.Tr("color_bg_clicked"), I18n.Tr("color_outline"), I18n.Tr("color_outline_clicked"),
                 I18n.Tr("color_text"), I18n.Tr("color_text_clicked"),
-                I18n.Tr("color_rain1"), I18n.Tr("color_rain2"), I18n.Tr("color_rain3")
+                I18n.Tr("color_rain1"), I18n.Tr("color_rain2"), I18n.Tr("color_rain3"),
+                I18n.Tr("ghost_rain_color1"), I18n.Tr("ghost_rain_color2"), I18n.Tr("ghost_rain_color3")
             };
             Color[] defaultColors = {
                 Background, BackgroundClicked, Outline, OutlineClicked,
                 Text, TextClicked,
-                RainColor, RainColor2, RainColor3
+                RainColor, RainColor2, RainColor3,
+                GhostRainColorDefault, GhostRainColor2Default, GhostRainColor3Default
             };
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 12; i++)
             {
-                if (i >= 6 && !Settings.EnableRainEffect)
+                if (i >= 6 && i < 9 && !Settings.EnableRainEffect)
+                    continue;
+                if (i >= 9 && !Settings.EnableGhostRain)
                     continue;
                 ColorExpanded[i] = GUILayout.Toggle(ColorExpanded[i], ColorExpanded[i] ? $"\u25E2 {colorNames[i]}" : $"\u25B6 {colorNames[i]}");
                 if (ColorExpanded[i])
@@ -1001,8 +963,6 @@ namespace JipperKeyViewer.KeyViewer
         // ===== KPS & Total independent color state =====
         int kpsColorType = -1;
         int totalColorType = -1;
-
-        int ghostRainColorExpanded = -1;
 
         private void DrawKpsTotalColors(int pi, string label, ref int expandedType)
         {
