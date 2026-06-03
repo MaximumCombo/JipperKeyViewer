@@ -157,6 +157,11 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Streamer mode — hide KPS and Total displays / 流媒体模式 — 隐藏 KPS 和 Total 显示</summary>
         public bool StreamerMode = false;
 
+        /// <summary>Per-row ghost rain colors / 每排鬼键雨滴颜色</summary>
+        public Color GhostRainColor = KeyViewer.GhostRainColorDefault;
+        public Color GhostRainColor2 = KeyViewer.GhostRainColor2Default;
+        public Color GhostRainColor3 = KeyViewer.GhostRainColor3Default;
+
         /// <summary>Per-key independent colors / 每键独立颜色</summary>
         public bool EnablePerKeyColors = false;
         /// <summary>Per-key colors (index 0-35) / 每键颜色配置</summary>

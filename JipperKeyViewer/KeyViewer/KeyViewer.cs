@@ -27,6 +27,9 @@ namespace JipperKeyViewer.KeyViewer
         public static readonly Color RainColor = new(0.5137255f, 0.1254902f, 0.858823538f);
         public static readonly Color RainColor2 = Color.white;
         public static readonly Color RainColor3 = Color.magenta;
+        public static readonly Color GhostRainColorDefault = new(1, 1, 1, 0.6f);
+        public static readonly Color GhostRainColor2Default = new(1, 1, 1, 0.6f);
+        public static readonly Color GhostRainColor3Default = new(1, 1, 1, 0.6f);
 
         // Back-row key index mapping for each layout style / 每种布局样式的后排按键索引映射
         // Each byte array defines which keys go in the second row, in display order / 每个字节数组定义了第二排有哪些按键及其显示顺序

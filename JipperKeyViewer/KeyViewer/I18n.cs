@@ -231,21 +231,6 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
 
-        [Serializable]
-        private class LangEntry
-        {
-            public string key = null;
-            public string en = null;
-            public string zh = null;
-            public string ko = null;
-        }
-
-        [Serializable]
-        private class LangFile
-        {
-            public LangEntry[] entries = null;
-        }
-
         /// <summary>
         /// Load translations from lang.json if present, merging into the built-in dictionaries / 从 lang.json 加载翻译（如果存在），合并到内置字典中
         /// </summary>
@@ -261,20 +246,46 @@ namespace JipperKeyViewer.KeyViewer
             try
             {
                 string json = File.ReadAllText(path);
-                var langFile = JsonUtility.FromJson<LangFile>(json);
-                if (langFile?.entries == null)
+                int count = 0;
+                int start = json.IndexOf("\"entries\"");
+                if (start < 0)
                 {
-                    Main.Mod.Logger.Error("I18n: lang.json has no entries array");
+                    Main.Mod.Logger.Error($"I18n: 'entries' key not found in lang.json");
                     return;
                 }
-                int count = 0;
-                foreach (var entry in langFile.entries)
+                start = json.IndexOf('[', start);
+                if (start < 0)
                 {
-                    if (string.IsNullOrEmpty(entry.key)) continue;
-                    if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
-                    if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
-                    if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
-                    count++;
+                    Main.Mod.Logger.Error($"I18n: entries array not found in lang.json");
+                    return;
+                }
+                int braceDepth = 0;
+                int entryStart = -1;
+                for (int i = start + 1; i < json.Length; i++)
+                {
+                    char c = json[i];
+                    if (c == '{')
+                    {
+                        if (braceDepth == 0) entryStart = i;
+                        braceDepth++;
+                    }
+                    else if (c == '}')
+                    {
+                        braceDepth--;
+                        if (braceDepth == 0 && entryStart >= 0)
+                        {
+                            string block = json.Substring(entryStart, i - entryStart + 1);
+                            var entry = ParseEntryBlock(block);
+                            if (entry != null)
+                            {
+                                if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
+                                if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
+                                if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
+                                count++;
+                            }
+                            entryStart = -1;
+                        }
+                    }
                 }
                 Main.Mod.Logger.Log($"I18n: loaded {count} entries from lang.json");
             }
@@ -282,6 +293,41 @@ namespace JipperKeyViewer.KeyViewer
             {
                 Main.Mod.Logger.Error($"I18n: failed to parse lang.json: {e.Message}");
             }
+        }
+
+        static string ExtractJsonStr(string json, string key)
+        {
+            int idx = json.IndexOf("\"" + key + "\"");
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx + key.Length + 2);
+            if (colon < 0) return null;
+            int quoteStart = json.IndexOf('"', colon);
+            if (quoteStart < 0) return null;
+            quoteStart++;
+            int quoteEnd = quoteStart;
+            while (quoteEnd < json.Length)
+            {
+                if (json[quoteEnd] == '\\') { quoteEnd += 2; continue; }
+                if (json[quoteEnd] == '"') break;
+                quoteEnd++;
+            }
+            if (quoteEnd >= json.Length) return null;
+            string val = json.Substring(quoteStart, quoteEnd - quoteStart);
+            val = val.Replace("\\\"", "\"").Replace("\\\\", "\\");
+            return val;
+        }
+
+        static I18nEntry ParseEntryBlock(string block)
+        {
+            string k = ExtractJsonStr(block, "key");
+            if (string.IsNullOrEmpty(k)) return null;
+            return new I18nEntry
+            {
+                key = k,
+                en = ExtractJsonStr(block, "en"),
+                zh = ExtractJsonStr(block, "zh"),
+                ko = ExtractJsonStr(block, "ko")
+            };
         }
 
         /// <summary>Returns the currently active translation dictionary / 返回当前活跃的翻译字典</summary>
@@ -295,5 +341,13 @@ namespace JipperKeyViewer.KeyViewer
         {
             return current.TryGetValue(key, out var val) ? val : key;
         }
+    }
+
+    internal class I18nEntry
+    {
+        public string key;
+        public string en;
+        public string zh;
+        public string ko;
     }
 }

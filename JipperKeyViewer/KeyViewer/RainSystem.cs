@@ -212,6 +212,16 @@ namespace JipperKeyViewer.KeyViewer
             };
         }
 
+        public Color GetGhostRainColor(byte color)
+        {
+            return color switch
+            {
+                0 => settings.GhostRainColor,
+                3 => settings.GhostRainColor3,
+                _ => settings.GhostRainColor2
+            };
+        }
+
         public Rain GetRainFromPool(Transform parent, Sprite sprite = null, bool isTiled = false)
         {
             Rain r;
@@ -288,7 +298,7 @@ namespace JipperKeyViewer.KeyViewer
             rawRain.rainComponent = rainComponent;
             rawRain.isGhost = isGhost;
             rawRain.growing = true;
-            rainComponent.image.color = key.rainColor;
+            rainComponent.image.color = isGhost ? GetGhostRainColor(key.color) : key.rainColor;
             if (isGhost)
                 rainComponent.transform.SetAsLastSibling();
 
