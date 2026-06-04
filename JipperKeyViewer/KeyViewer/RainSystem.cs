@@ -319,20 +319,6 @@ namespace JipperKeyViewer.KeyViewer
             rawRainPool.Push(r);
         }
 
-        /// <summary>Pre-warm object pools to avoid allocation at runtime / 预热对象池，避免运行时分配</summary>
-        public void PreWarmPool(int rainCount, int rawRainCount)
-        {
-            for (int i = 0; i < rainCount; i++)
-            {
-                Rain r = GetRainFromPool(null);
-                ReturnRain(r);
-            }
-            for (int i = 0; i < rawRainCount; i++)
-            {
-                ReturnRawRain(new RawRain(0));
-            }
-        }
-
         private void CreateRainDropForKey(int keyIndex, Key key, bool isGhost = false)
         {
             if (key == null || key.rain == null) return;

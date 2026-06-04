@@ -70,7 +70,6 @@ namespace JipperKeyViewer.KeyViewer
                 keyPressTimes[i] = new Queue<long>(32);
             lastPerKeyKps = new int[36];
             Stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            rainSystem.PreWarmPool(10, 20);
             RefreshAllCountDisplay();
         }
 
