@@ -148,6 +148,8 @@ namespace JipperKeyViewer.KeyViewer
         private bool wasEnabled;
         /// <summary>Whether the font has been restored after scene load / 场景加载后字体是否已恢复</summary>
         private bool fontRestored;
+        /// <summary>Whether any key press occurred recently (skip idle per-key KPS loop) / 最近是否有按键（跳过空闲的每键 KPS 循环）</summary>
+        private bool _hasKeyPressActivity;
 
         // ======================== Unity Lifecycle / Unity 生命周期 ========================
 

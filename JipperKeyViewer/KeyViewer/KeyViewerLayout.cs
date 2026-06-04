@@ -64,10 +64,13 @@ namespace JipperKeyViewer.KeyViewer
             }
             // Persist the overlay across scene loads / 使覆盖层在场景加载中持久化
             Object.DontDestroyOnLoad(KeyViewerObject);
-            PressTimes = new Queue<long>();
+            PressTimes = new Queue<long>(256);
             keyPressTimes = new Queue<long>[36];
+            for (int i = 0; i < 36; i++)
+                keyPressTimes[i] = new Queue<long>(32);
             lastPerKeyKps = new int[36];
             Stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            rainSystem.PreWarmPool(10, 20);
             RefreshAllCountDisplay();
         }
 
