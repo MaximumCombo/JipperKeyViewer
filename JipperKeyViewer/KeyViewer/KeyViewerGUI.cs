@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
+using static UnityEngine.Rendering.RayTracingAccelerationStructure;
 
 namespace JipperKeyViewer.KeyViewer
 {
@@ -411,28 +412,28 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.Label(I18n.Tr("rain_height") + ":");
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(I18n.Tr("rain_row1") + ":");
-                Settings.RainHeightRow1 = GUILayout.HorizontalSlider(Settings.RainHeightRow1, 1f, 1000f, GUILayout.Width(120));
+                Settings.RainHeightRow1 = GUILayout.HorizontalSlider(Settings.RainHeightRow1, 1f, 2000f, GUILayout.Width(120));
                 string height1Text = GUILayout.TextField(Settings.RainHeightRow1.ToString("F2"), FloatFieldWidth(Settings.RainHeightRow1.ToString("F2")));
                 if (float.TryParse(height1Text, out float newHeight1))
-                    Settings.RainHeightRow1 = Mathf.Clamp(newHeight1, 1f, 1000f);
+                    Settings.RainHeightRow1 = Mathf.Clamp(newHeight1, 1f, float.MaxValue);
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(I18n.Tr("rain_row2") + ":");
-                Settings.RainHeightRow2 = GUILayout.HorizontalSlider(Settings.RainHeightRow2, 1f, 1000f, GUILayout.Width(120));
+                Settings.RainHeightRow2 = GUILayout.HorizontalSlider(Settings.RainHeightRow2, 1f, 2000f, GUILayout.Width(120));
                 string height2Text = GUILayout.TextField(Settings.RainHeightRow2.ToString("F2"), FloatFieldWidth(Settings.RainHeightRow2.ToString("F2")));
                 if (float.TryParse(height2Text, out float newHeight2))
-                    Settings.RainHeightRow2 = Mathf.Clamp(newHeight2, 1f, 1000f);
+                    Settings.RainHeightRow2 = Mathf.Clamp(newHeight2, 1f, float.MaxValue);
                 GUILayout.EndHorizontal();
 
                 if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(I18n.Tr("rain_row3") + ":");
-                    Settings.RainHeightRow3 = GUILayout.HorizontalSlider(Settings.RainHeightRow3, 1f, 1000f, GUILayout.Width(120));
+                    Settings.RainHeightRow3 = GUILayout.HorizontalSlider(Settings.RainHeightRow3, 1f, 2000f, GUILayout.Width(120));
                     string height3Text = GUILayout.TextField(Settings.RainHeightRow3.ToString("F2"), FloatFieldWidth(Settings.RainHeightRow3.ToString("F2")));
                     if (float.TryParse(height3Text, out float newHeight3))
-                        Settings.RainHeightRow3 = Mathf.Clamp(newHeight3, 1f, 1000f);
+                        Settings.RainHeightRow3 = Mathf.Clamp(newHeight3, 1f, float.MaxValue);
                     GUILayout.EndHorizontal();
                 }
 
@@ -440,28 +441,57 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.Label(I18n.Tr("rain_speed") + ":");
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(I18n.Tr("rain_row1") + ":");
-                Settings.RainSpeedRow1 = GUILayout.HorizontalSlider(Settings.RainSpeedRow1, 50f, 1000f, GUILayout.Width(120));
+                Settings.RainSpeedRow1 = GUILayout.HorizontalSlider(Settings.RainSpeedRow1, 50f, 2000f, GUILayout.Width(120));
                 string speed1Text = GUILayout.TextField(Settings.RainSpeedRow1.ToString("F0"), FloatFieldWidth(Settings.RainSpeedRow1.ToString("F0")));
                 if (float.TryParse(speed1Text, out float newSpeed1))
-                    Settings.RainSpeedRow1 = Mathf.Clamp(newSpeed1, 50f, 1000f);
+                    Settings.RainSpeedRow1 = Mathf.Clamp(newSpeed1, 50f, float.MaxValue);
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(I18n.Tr("rain_row2") + ":");
-                Settings.RainSpeedRow2 = GUILayout.HorizontalSlider(Settings.RainSpeedRow2, 50f, 1000f, GUILayout.Width(120));
+                Settings.RainSpeedRow2 = GUILayout.HorizontalSlider(Settings.RainSpeedRow2, 50f, 2000f, GUILayout.Width(120));
                 string speed2Text = GUILayout.TextField(Settings.RainSpeedRow2.ToString("F0"), FloatFieldWidth(Settings.RainSpeedRow2.ToString("F0")));
                 if (float.TryParse(speed2Text, out float newSpeed2))
-                    Settings.RainSpeedRow2 = Mathf.Clamp(newSpeed2, 50f, 1000f);
+                    Settings.RainSpeedRow2 = Mathf.Clamp(newSpeed2, 50f, float.MaxValue);
                 GUILayout.EndHorizontal();
 
                 if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(I18n.Tr("rain_row3") + ":");
-                    Settings.RainSpeedRow3 = GUILayout.HorizontalSlider(Settings.RainSpeedRow3, 50f, 1000f, GUILayout.Width(120));
+                    Settings.RainSpeedRow3 = GUILayout.HorizontalSlider(Settings.RainSpeedRow3, 50f, 2000f, GUILayout.Width(120));
                     string speed3Text = GUILayout.TextField(Settings.RainSpeedRow3.ToString("F0"), FloatFieldWidth(Settings.RainSpeedRow3.ToString("F0")));
                     if (float.TryParse(speed3Text, out float newSpeed3))
-                        Settings.RainSpeedRow3 = Mathf.Clamp(newSpeed3, 50f, 1000f);
+                        Settings.RainSpeedRow3 = Mathf.Clamp(newSpeed3, 50f, float.MaxValue);
+                    GUILayout.EndHorizontal();
+                }
+
+                // Per-row rain width / 每排雨滴宽度
+                GUILayout.Label(I18n.Tr("rain_width") + ":");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(I18n.Tr("rain_width_row1") + ":");
+                Settings.RainWidthRow1 = GUILayout.HorizontalSlider(Settings.RainWidthRow1, 10f, 200f, GUILayout.Width(120));
+                string width1Text = GUILayout.TextField(Settings.RainWidthRow1.ToString("F0"), FloatFieldWidth(Settings.RainWidthRow1.ToString("F0")));
+                if (float.TryParse(width1Text, out float newWidth1))
+                    Settings.RainWidthRow1 = Mathf.Max(10f, newWidth1);
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(I18n.Tr("rain_width_row2") + ":");
+                Settings.RainWidthRow2 = GUILayout.HorizontalSlider(Settings.RainWidthRow2, 10f, 200f, GUILayout.Width(120));
+                string width2Text = GUILayout.TextField(Settings.RainWidthRow2.ToString("F0"), FloatFieldWidth(Settings.RainWidthRow2.ToString("F0")));
+                if (float.TryParse(width2Text, out float newWidth2))
+                    Settings.RainWidthRow2 = Mathf.Max(10f, newWidth2);
+                GUILayout.EndHorizontal();
+
+                if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(I18n.Tr("rain_width_row3") + ":");
+                    Settings.RainWidthRow3 = GUILayout.HorizontalSlider(Settings.RainWidthRow3, 10f, 200f, GUILayout.Width(120));
+                    string width3Text = GUILayout.TextField(Settings.RainWidthRow3.ToString("F0"), FloatFieldWidth(Settings.RainWidthRow3.ToString("F0")));
+                    if (float.TryParse(width3Text, out float newWidth3))
+                        Settings.RainWidthRow3 = Mathf.Max(10f, newWidth3);
                     GUILayout.EndHorizontal();
                 }
 
@@ -486,7 +516,7 @@ namespace JipperKeyViewer.KeyViewer
                     float newFadeDur = GUILayout.HorizontalSlider(Settings.RainFadeDuration, 0.03f, 5.0f, GUILayout.Width(200));
                     string fadeDurText = GUILayout.TextField(newFadeDur.ToString("F2"), FloatFieldWidth(newFadeDur.ToString("F2")));
                     if (float.TryParse(fadeDurText, out float parsedFade))
-                        newFadeDur = Mathf.Clamp(parsedFade, 0.03f, 5.0f);
+                        newFadeDur = Mathf.Clamp(parsedFade, 0.03f, float.MaxValue);
                     if (newFadeDur != Settings.RainFadeDuration)
                     {
                         Settings.RainFadeDuration = newFadeDur;
@@ -510,7 +540,7 @@ namespace JipperKeyViewer.KeyViewer
                     float newFadePx = GUILayout.HorizontalSlider(Settings.RainFadePx, 1f, 200f, GUILayout.Width(120));
                     string fadePxText = GUILayout.TextField(newFadePx.ToString("F0"), GUILayout.Width(40));
                     if (float.TryParse(fadePxText, out float parsedPx))
-                        newFadePx = Mathf.Clamp(parsedPx, 1f, 200f);
+                        newFadePx = Mathf.Clamp(parsedPx, 1f, float.MaxValue);
                     GUILayout.Label("px");
                     if (!Mathf.Approximately(newFadePx, Settings.RainFadePx))
                     {

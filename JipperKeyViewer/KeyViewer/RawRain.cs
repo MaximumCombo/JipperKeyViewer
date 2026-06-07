@@ -27,9 +27,9 @@ namespace JipperKeyViewer.KeyViewer
             if (updateSize || FinalSize == default)
                 FinalSize = new Vector2(color switch
                 {
-                    0 => 50,
-                    3 => 30,
-                    _ => 40
+                    0 => KeyViewer.Settings.RainWidthRow1,
+                    3 => KeyViewer.Settings.RainWidthRow3,
+                    _ => KeyViewer.Settings.RainWidthRow2
                 }, y);
             if (y > height)
             {

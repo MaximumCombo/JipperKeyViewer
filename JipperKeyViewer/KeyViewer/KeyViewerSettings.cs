@@ -137,6 +137,10 @@ namespace JipperKeyViewer.KeyViewer
         public float RainHeightRow1 = 275f;
         public float RainHeightRow2 = 275f;
         public float RainHeightRow3 = 275f;
+        /// <summary> Per-row rain width / 每排雨滴独立宽度 </summary>
+        public float RainWidthRow1 = 50f;
+        public float RainWidthRow2 = 40f;
+        public float RainWidthRow3 = 30f;
 
         // Custom position (normalized 0-1, X=0 left X=1 right, Y=0 top Y=1 bottom) / 自定义位置（归一化 0-1）
         public Vector2 MainKeyViewerPosition = new Vector2(0, 1);
