@@ -126,28 +126,44 @@ namespace JipperKeyViewer.KeyViewer
         {
             foreach (KeyCode k in AllKeyCodes)
             {
-                string s = k.ToString();
-                if (s.StartsWith("Alpha")) s = s.Substring(5);
-                else if (s.StartsWith("Keypad")) s = s.Substring(6);
-                else if (s.StartsWith("Left")) s = 'L' + s.Substring(4);
-                else if (s.StartsWith("Right")) s = 'R' + s.Substring(5);
-                else if (s.StartsWith("Mouse")) s = "M" + s.Substring(5);
-                if (s.EndsWith("Shift")) s = s.Substring(0, s.Length - 5) + "\u21E7";
-                else if (s.EndsWith("Control")) s = s.Substring(0, s.Length - 7) + "Ctrl";
-                s = s switch
-                {
-                    "Plus" => "+", "Minus" => "-", "Multiply" => "*", "Divide" => "/",
-                    "Enter" => "\u21B5", "Equals" => "=", "Period" => ".", "Return" => "\u21B5",
-                    "None" => " ", "Tab" => "\u21E5", "Backslash" => "\\", "Backspace" => "Back",
-                    "Slash" => "/", "LBracket" => "[", "RBracket" => "]", "Semicolon" => ";",
-                    "Comma" => ",", "Quote" => "'", "UpArrow" => "\u2191", "DownArrow" => "\u2193",
-                    "LArrow" => "\u2190", "RArrow" => "\u2192", "Space" => "\u2423",
-                    "BackQuote" => "`", "PageDown" => "Pg\u2193", "PageUp" => "Pg\u2191",
-                    "CapsLock" => "\u21EA", "Insert" => "Ins",
-                    _ => s
-                };
+                string s = StripKeyCodePrefix(k.ToString());
+                s = ReplaceKeyCodeSuffix(s);
+                s = MapKeyCodeSymbol(s);
                 KeyDisplayNames[k] = s;
             }
+        }
+
+        static string StripKeyCodePrefix(string s)
+        {
+            if (s.StartsWith("Alpha")) return s.Substring(5);
+            if (s.StartsWith("Keypad")) return s.Substring(6);
+            if (s.StartsWith("Left")) return 'L' + s.Substring(4);
+            if (s.StartsWith("Right")) return 'R' + s.Substring(5);
+            if (s.StartsWith("Mouse")) return "M" + s.Substring(5);
+            return s;
+        }
+
+        static string ReplaceKeyCodeSuffix(string s)
+        {
+            if (s.EndsWith("Shift")) return s.Substring(0, s.Length - 5) + "\u21E7";
+            if (s.EndsWith("Control")) return s.Substring(0, s.Length - 7) + "Ctrl";
+            return s;
+        }
+
+        static string MapKeyCodeSymbol(string s)
+        {
+            return s switch
+            {
+                "Plus" => "+", "Minus" => "-", "Multiply" => "*", "Divide" => "/",
+                "Enter" => "\u21B5", "Equals" => "=", "Period" => ".", "Return" => "\u21B5",
+                "None" => " ", "Tab" => "\u21E5", "Backslash" => "\\", "Backspace" => "Back",
+                "Slash" => "/", "LBracket" => "[", "RBracket" => "]", "Semicolon" => ";",
+                "Comma" => ",", "Quote" => "'", "UpArrow" => "\u2191", "DownArrow" => "\u2193",
+                "LArrow" => "\u2190", "RArrow" => "\u2192", "Space" => "\u2423",
+                "BackQuote" => "`", "PageDown" => "Pg\u2193", "PageUp" => "Pg\u2191",
+                "CapsLock" => "\u21EA", "Insert" => "Ins",
+                _ => s
+            };
         }
 
         /// <summary>Calculate IMGUI text field width based on content length / 根据内容长度计算 IMGUI 文本框宽度</summary>

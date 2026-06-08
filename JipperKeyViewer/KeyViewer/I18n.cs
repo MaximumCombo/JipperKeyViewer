@@ -273,53 +273,65 @@ namespace JipperKeyViewer.KeyViewer
             try
             {
                 string json = File.ReadAllText(path);
-                int count = 0;
-                int start = json.IndexOf("\"entries\"");
-                if (start < 0)
-                {
-                    Main.Mod.Logger.Error($"I18n: 'entries' key not found in lang.json");
-                    return;
-                }
-                start = json.IndexOf('[', start);
-                if (start < 0)
-                {
-                    Main.Mod.Logger.Error($"I18n: entries array not found in lang.json");
-                    return;
-                }
-                int braceDepth = 0;
-                int entryStart = -1;
-                for (int i = start + 1; i < json.Length; i++)
-                {
-                    char c = json[i];
-                    if (c == '{')
-                    {
-                        if (braceDepth == 0) entryStart = i;
-                        braceDepth++;
-                    }
-                    else if (c == '}')
-                    {
-                        braceDepth--;
-                        if (braceDepth == 0 && entryStart >= 0)
-                        {
-                            string block = json.Substring(entryStart, i - entryStart + 1);
-                            var entry = ParseEntryBlock(block);
-                            if (entry != null)
-                            {
-                                if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
-                                if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
-                                if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
-                                count++;
-                            }
-                            entryStart = -1;
-                        }
-                    }
-                }
+                int entriesStart = FindEntriesStart(json);
+                if (entriesStart < 0) return;
+
+                int count = ParseEntries(json, entriesStart);
                 Main.Mod.Logger.Log($"I18n: loaded {count} entries from lang.json");
             }
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"I18n: failed to parse lang.json: {e.Message}");
             }
+        }
+
+        private static int FindEntriesStart(string json)
+        {
+            int start = json.IndexOf("\"entries\"");
+            if (start < 0)
+            {
+                Main.Mod.Logger.Error($"I18n: 'entries' key not found in lang.json");
+                return -1;
+            }
+            start = json.IndexOf('[', start);
+            if (start < 0)
+            {
+                Main.Mod.Logger.Error($"I18n: entries array not found in lang.json");
+                return -1;
+            }
+            return start;
+        }
+
+        private static int ParseEntries(string json, int start)
+        {
+            int braceDepth = 0;
+            int entryStart = -1;
+            int count = 0;
+            for (int i = start + 1; i < json.Length; i++)
+            {
+                char c = json[i];
+                if (c == '{')
+                {
+                    if (braceDepth == 0) entryStart = i;
+                    braceDepth++;
+                }
+                else if (c == '}' && --braceDepth == 0 && entryStart >= 0)
+                {
+                    string block = json.Substring(entryStart, i - entryStart + 1);
+                    MergeEntry(ParseEntryBlock(block), ref count);
+                    entryStart = -1;
+                }
+            }
+            return count;
+        }
+
+        private static void MergeEntry(I18nEntry entry, ref int count)
+        {
+            if (entry == null) return;
+            if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
+            if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
+            if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
+            count++;
         }
 
         static string ExtractJsonStr(string json, string key)

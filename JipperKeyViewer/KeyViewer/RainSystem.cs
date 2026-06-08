@@ -33,29 +33,8 @@ namespace JipperKeyViewer.KeyViewer
             if (keys == null || keys.Length == 0) return;
             if (rainActiveKeys.Count == 0) return;
 
-            if (cachedRainSpeed1 != settings.RainSpeedRow1 || cachedRainSpeed2 != settings.RainSpeedRow2 ||
-                cachedRainSpeed3 != settings.RainSpeedRow3 || cachedRainHeight1 != settings.RainHeightRow1 ||
-                cachedRainHeight2 != settings.RainHeightRow2 || cachedRainHeight3 != settings.RainHeightRow3)
-            {
-                rowSpeeds[0] = settings.RainSpeedRow1 / 300f;
-                rowSpeeds[1] = settings.RainSpeedRow2 / 300f;
-                rowSpeeds[2] = settings.RainSpeedRow3 / 300f;
-                rowHeights[0] = settings.RainHeightRow1;
-                rowHeights[1] = settings.RainHeightRow2;
-                rowHeights[2] = settings.RainHeightRow3;
-                cachedRainSpeed1 = settings.RainSpeedRow1;
-                cachedRainSpeed2 = settings.RainSpeedRow2;
-                cachedRainSpeed3 = settings.RainSpeedRow3;
-                cachedRainHeight1 = settings.RainHeightRow1;
-                cachedRainHeight2 = settings.RainHeightRow2;
-                cachedRainHeight3 = settings.RainHeightRow3;
-            }
-
-            float fadeDuration = settings.RainFadeDuration;
-            // Single native property call per frame / 每帧只调用一次原生属性
-            float unscaledDt = Time.unscaledDeltaTime;
-            float dt = unscaledDt * 1000f;
-            float dtSec = unscaledDt;
+            SyncCachedSpeeds();
+            float dtSec = Time.unscaledDeltaTime;
 
             for (int i = 0; i < rainActiveKeys.Count; i++)
             {
@@ -71,66 +50,89 @@ namespace JipperKeyViewer.KeyViewer
                 }
 
                 int row = ki < 8 ? 0 : (ki < 16 ? 1 : 2);
-
                 for (int j = key.rainList.Count - 1; j >= 0; j--)
-                {
-                    RawRain rain = key.rainList[j];
-                    if (rain.removed) continue;
-
-                    bool updateSize = rain.growing;
-
-                    if (!rain.UpdateLocation(updateSize, rowSpeeds[row], rowHeights[row], dt))
-                    {
-                        ReturnRainAndRawRain(rain, key, j);
-                        continue;
-                    }
-
-                    Rain r = rain.rainComponent;
-                    if (r == null) continue;
-
-                    if (rain.sizeDelta != null)
-                    {
-                        r.transform.sizeDelta = rain.sizeDelta.Value;
-                        rain.sizeDelta = null;
-                    }
-                    if (rain.anchoredPosition != null)
-                    {
-                        r.transform.anchoredPosition = rain.anchoredPosition.Value;
-                        rain.anchoredPosition = null;
-                    }
-
-                    if (r.fadingOut)
-                    {
-                        r.fadeTimer += dtSec;
-                        float t = Mathf.Clamp01(r.fadeTimer / fadeDuration);
-                        float eased = t * (2f - t);
-                        float a = 1f - eased;
-                        var c = r.graphic.color;
-                        c.a = a;
-                        r.graphic.color = c;
-                        if (t >= 1f)
-                        {
-                            ReturnRainAndRawRain(rain, key, j);
-                        }
-                    }
-
-                    float trailEdgeDist = rain.elapsedMs * rowSpeeds[row];
-                    float drawH;
-                    if (trailEdgeDist > rowHeights[row])
-                    {
-                        drawH = rain.FinalSize.y - trailEdgeDist + rowHeights[row];
-                        trailEdgeDist = rowHeights[row];
-                    }
-                    else
-                    {
-                        drawH = rain.growing ? trailEdgeDist : rain.FinalSize.y;
-                    }
-                    float dFar = trailEdgeDist;
-                    float dNear = dFar - drawH;
-                    float fp = settings.EnableRainGradient && !rain.isGhost ? settings.RainFadePx : 0f;
-                    r.graphic.SetFadeParams(dNear, dFar, rowHeights[row], fp, false);
-                }
+                    UpdateSingleRainDrop(key.rainList[j], key, j, row, dtSec);
             }
+        }
+
+        private void SyncCachedSpeeds()
+        {
+            if (cachedRainSpeed1 == settings.RainSpeedRow1 && cachedRainSpeed2 == settings.RainSpeedRow2 &&
+                cachedRainSpeed3 == settings.RainSpeedRow3 && cachedRainHeight1 == settings.RainHeightRow1 &&
+                cachedRainHeight2 == settings.RainHeightRow2 && cachedRainHeight3 == settings.RainHeightRow3)
+                return;
+            rowSpeeds[0] = settings.RainSpeedRow1 / 300f;
+            rowSpeeds[1] = settings.RainSpeedRow2 / 300f;
+            rowSpeeds[2] = settings.RainSpeedRow3 / 300f;
+            rowHeights[0] = settings.RainHeightRow1;
+            rowHeights[1] = settings.RainHeightRow2;
+            rowHeights[2] = settings.RainHeightRow3;
+            cachedRainSpeed1 = settings.RainSpeedRow1;
+            cachedRainSpeed2 = settings.RainSpeedRow2;
+            cachedRainSpeed3 = settings.RainSpeedRow3;
+            cachedRainHeight1 = settings.RainHeightRow1;
+            cachedRainHeight2 = settings.RainHeightRow2;
+            cachedRainHeight3 = settings.RainHeightRow3;
+        }
+
+        private void UpdateSingleRainDrop(RawRain rain, Key key, int j, int row, float dtSec)
+        {
+            if (rain.removed) return;
+
+            float dt = dtSec * 1000f;
+            if (!rain.UpdateLocation(rain.growing, rowSpeeds[row], rowHeights[row], dt))
+            {
+                ReturnRainAndRawRain(rain, key, j);
+                return;
+            }
+
+            Rain r = rain.rainComponent;
+            if (r == null) return;
+
+            ApplyRainTransforms(rain, r);
+            UpdateFadeOut(r, dtSec, rain, key, j);
+            UpdateTrailEdge(rain, r, row);
+        }
+
+        private static void ApplyRainTransforms(RawRain rain, Rain r)
+        {
+            if (rain.sizeDelta != null)
+            {
+                r.transform.sizeDelta = rain.sizeDelta.Value;
+                rain.sizeDelta = null;
+            }
+            if (rain.anchoredPosition != null)
+            {
+                r.transform.anchoredPosition = rain.anchoredPosition.Value;
+                rain.anchoredPosition = null;
+            }
+        }
+
+        private void UpdateFadeOut(Rain r, float dtSec, RawRain rain, Key key, int j)
+        {
+            if (!r.fadingOut) return;
+            r.fadeTimer += dtSec;
+            float t = Mathf.Clamp01(r.fadeTimer / settings.RainFadeDuration);
+            float a = 1f - (t * (2f - t));
+            var c = r.graphic.color;
+            c.a = a;
+            r.graphic.color = c;
+            if (t >= 1f)
+                ReturnRainAndRawRain(rain, key, j);
+        }
+
+        private void UpdateTrailEdge(RawRain rain, Rain r, int row)
+        {
+            float trailEdgeDist = rain.elapsedMs * rowSpeeds[row];
+            float drawH = trailEdgeDist > rowHeights[row]
+                ? rain.FinalSize.y - trailEdgeDist + rowHeights[row]
+                : (rain.growing ? trailEdgeDist : rain.FinalSize.y);
+            trailEdgeDist = Mathf.Min(trailEdgeDist, rowHeights[row]);
+
+            float dFar = trailEdgeDist;
+            float dNear = dFar - drawH;
+            float fp = settings.EnableRainGradient && !rain.isGhost ? settings.RainFadePx : 0f;
+            r.graphic.SetFadeParams(dNear, dFar, rowHeights[row], fp, false);
         }
 
         private void ReturnRainAndRawRain(RawRain rain, Key key, int listIndex)
@@ -217,42 +219,23 @@ namespace JipperKeyViewer.KeyViewer
                 Object.Destroy(rainPool.Pop().gameObject);
         }
 
-        public Color GetRainColor(byte color)
-        {
-            return color switch
-            {
-                0 => settings.RainColor,
-                3 => settings.RainColor3,
-                _ => settings.RainColor2
-            };
-        }
+        public Color GetRainColor(byte color) => RainColor(color, false);
 
-        public Color GetGhostRainColor(byte color)
+        public Color GetGhostRainColor(byte color) => RainColor(color, true);
+
+        private Color RainColor(byte color, bool ghost)
         {
             return color switch
             {
-                0 => settings.GhostRainColor,
-                3 => settings.GhostRainColor3,
-                _ => settings.GhostRainColor2
+                0 => ghost ? settings.GhostRainColor : settings.RainColor,
+                3 => ghost ? settings.GhostRainColor3 : settings.RainColor3,
+                _ => ghost ? settings.GhostRainColor2 : settings.RainColor2
             };
         }
 
         public Rain GetRainFromPool(Transform parent)
         {
-            Rain r;
-            if (rainPool.Count > 0)
-            {
-                r = rainPool.Pop();
-                r.Init(parent);
-            }
-            else
-            {
-                GameObject go = new GameObject("Rain");
-                go.AddComponent<RectTransform>();
-                r = go.AddComponent<Rain>();
-                r.Init(parent);
-            }
-            return r;
+            return GetRainFromPool(parent, null, false);
         }
 
         public Rain GetRainFromPool(Transform parent, Sprite sprite, bool isTiled)
@@ -261,15 +244,17 @@ namespace JipperKeyViewer.KeyViewer
             if (rainPool.Count > 0)
             {
                 r = rainPool.Pop();
-                r.Init(parent, sprite, isTiled);
             }
             else
             {
                 GameObject go = new GameObject("Rain");
                 go.AddComponent<RectTransform>();
                 r = go.AddComponent<Rain>();
-                r.Init(parent, sprite, isTiled);
             }
+            if (sprite == null)
+                r.Init(parent);
+            else
+                r.Init(parent, sprite, isTiled);
             return r;
         }
 

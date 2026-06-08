@@ -45,17 +45,8 @@ namespace JipperKeyViewer.KeyViewer
             Keys = new Key[36];
             InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
             // Initialize foot keys based on selected layout / 根据选中的布局初始化脚键
-            switch (Settings.FootKeyViewerStyle)
-            {
-                case FootKeyviewerStyle.Key2:  InitializeFootKeyViewer(2);  break;
-                case FootKeyviewerStyle.Key4:  InitializeFootKeyViewer(4);  break;
-                case FootKeyviewerStyle.Key6:  InitializeFootKeyViewer(6);  break;
-                case FootKeyviewerStyle.Key8:  InitializeFootKeyViewer(8);  break;
-                case FootKeyviewerStyle.Key10: InitializeFootKeyViewer(10); break;
-                case FootKeyviewerStyle.Key12: InitializeFootKeyViewer(12); break;
-                case FootKeyviewerStyle.Key14: InitializeFootKeyViewer(14); break;
-                case FootKeyviewerStyle.Key16: InitializeFootKeyViewer(16); break;
-            }
+            int footSize = FootKeySize(Settings.FootKeyViewerStyle);
+            if (footSize > 0) InitializeFootKeyViewer(footSize);
             // Apply streamer mode (hide KPS/Total)
             if (Settings.StreamerMode)
             {
@@ -279,69 +270,90 @@ namespace JipperKeyViewer.KeyViewer
             transform.localScale = Vector3.one;
             Key key = obj.AddComponent<Key>();
             key.isPressed = false;
-            GameObject gameObject;
-            Image image;
-            TextMeshProUGUI text;
-            // Background
-            gameObject = new GameObject("Background");
-            transform = gameObject.AddComponent<RectTransform>();
-            transform.SetParent(obj.transform);
-            transform.anchorMin = transform.anchorMax = transform.pivot = Vector2.zero;
-            transform.anchoredPosition = Vector2.zero;
-            transform.sizeDelta = new Vector2(sizeX * 2, (slim ? 30 : 50) * 2);
-            transform.localScale = new Vector3(0.5f, 0.5f);
-            image = gameObject.AddComponent<Image>();
-            image.color = settings.Background;
-            if (keyBackgroundSprite != null)
+            key.background = CreateImage(obj, "Background", sizeX, slim, keyBackgroundSprite, settings.Background);
+            key.outline = CreateImage(obj, "Outline", sizeX, slim, keyOutlineSprite, settings.Outline);
+            key.text = CreateKeyText(obj, sizeX, slim, count, settings);
+            if (count)
+                key.value = CreateCountText(obj, sizeX, slim, settings);
+            UpdateKeyText(key, i);
+            SetupRainContainer(key, obj, sizeX, raining);
+            ApplyKeyColors(key, i, raining);
+            return key;
+        }
+
+        private static Image CreateImage(GameObject parent, string name, float sizeX, bool slim, Sprite sprite, Color color)
+        {
+            GameObject go = new(name);
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.SetParent(parent.transform);
+            rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(sizeX * 2, (slim ? 30 : 50) * 2);
+            rt.localScale = new Vector3(0.5f, 0.5f);
+            Image image = go.AddComponent<Image>();
+            image.color = color;
+            if (sprite != null)
             {
-                image.sprite = keyBackgroundSprite;
+                image.sprite = sprite;
                 image.type = Image.Type.Sliced;
             }
             image.raycastTarget = false;
-            key.background = image;
-            // Outline
-            gameObject = new GameObject("Outline");
-            transform = gameObject.AddComponent<RectTransform>();
-            transform.SetParent(obj.transform);
-            transform.anchorMin = transform.anchorMax = transform.pivot = Vector2.zero;
-            transform.anchoredPosition = Vector2.zero;
-            transform.sizeDelta = new Vector2(sizeX * 2, (slim ? 30 : 50) * 2);
-            transform.localScale = new Vector3(0.5f, 0.5f);
-            image = gameObject.AddComponent<Image>();
-            image.color = settings.Outline;
-            if (keyOutlineSprite != null)
-            {
-                image.sprite = keyOutlineSprite;
-                image.type = Image.Type.Sliced;
-            }
-            image.raycastTarget = false;
-            key.outline = image;
-            // KeyText
-            gameObject = new GameObject("KeyText");
-            transform = gameObject.AddComponent<RectTransform>();
-            transform.SetParent(obj.transform);
+            return image;
+        }
+
+        private TextMeshProUGUI CreateKeyText(GameObject parent, float sizeX, bool slim, bool count, KeyViewerSettings settings)
+        {
+            GameObject go = new("KeyText");
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.SetParent(parent.transform);
             if (slim)
             {
-                transform.sizeDelta = new Vector2(sizeX / 2, 30);
-                transform.anchorMin = transform.anchorMax = transform.pivot = new Vector2(0, 0.5f);
-                transform.anchoredPosition = new Vector2(count ? 10 : 7.5f, 0);
+                rt.sizeDelta = new Vector2(sizeX / 2, 30);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0, 0.5f);
+                rt.anchoredPosition = new Vector2(count ? 10 : 7.5f, 0);
             }
             else
             {
-                transform.sizeDelta = new Vector2(sizeX - 4, 32);
+                rt.sizeDelta = new Vector2(sizeX - 4, 32);
                 if (!count)
                 {
-                    transform.anchorMin = transform.anchorMax = transform.pivot = new Vector2(0.5f, 0.5f);
-                    transform.anchoredPosition = Vector2.zero;
+                    rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                    rt.anchoredPosition = Vector2.zero;
                 }
                 else
                 {
-                    transform.anchorMin = transform.anchorMax = transform.pivot = new Vector2(0.5f, 1);
-                    transform.anchoredPosition = new Vector2(0, 2);
+                    rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1);
+                    rt.anchoredPosition = new Vector2(0, 2);
                 }
             }
-            transform.localScale = Vector3.one;
-            text = gameObject.AddComponent<TextMeshProUGUI>();
+            rt.localScale = Vector3.one;
+            return ConfigureText(go, settings, slim ? TextAlignmentOptions.Left : TextAlignmentOptions.Center);
+        }
+
+        private TextMeshProUGUI CreateCountText(GameObject parent, float sizeX, bool slim, KeyViewerSettings settings)
+        {
+            GameObject go = new("CountText");
+            RectTransform rt = go.AddComponent<RectTransform>();
+            rt.SetParent(parent.transform);
+            if (slim)
+            {
+                rt.sizeDelta = new Vector2(sizeX / 2, 30);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1, 0.5f);
+                rt.anchoredPosition = new Vector2(-10, 0);
+            }
+            else
+            {
+                rt.sizeDelta = new Vector2(sizeX - 4, 16);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0);
+                rt.anchoredPosition = new Vector2(0, 2);
+            }
+            rt.localScale = Vector3.one;
+            return ConfigureText(go, settings, slim ? TextAlignmentOptions.Right : TextAlignmentOptions.Top);
+        }
+
+        private TextMeshProUGUI ConfigureText(GameObject go, KeyViewerSettings settings, TextAlignmentOptions alignment)
+        {
+            var text = go.AddComponent<TextMeshProUGUI>();
             var keyFont = GetCurrentFont();
             if (keyFont != null)
             {
@@ -349,70 +361,34 @@ namespace JipperKeyViewer.KeyViewer
                 var mat = GetShadowMaterial(keyFont);
                 if (mat != null) text.fontMaterial = mat;
             }
-            text.fontStyle = (TMPro.FontStyles)settings.FontStyleFlags;
+            text.fontStyle = (FontStyles)settings.FontStyleFlags;
             text.enableAutoSizing = true;
             text.fontSizeMin = 0;
             text.fontSizeMax = 20;
-            text.alignment = slim ? TextAlignmentOptions.Left : TextAlignmentOptions.Center;
+            text.alignment = alignment;
             text.color = settings.Text;
             text.raycastTarget = false;
-            key.text = text;
-            // Press count text / 按键计数文本
-            if (count)
-            {
-                gameObject = new GameObject("CountText");
-                transform = gameObject.AddComponent<RectTransform>();
-                transform.SetParent(obj.transform);
-                if (slim)
-                {
-                    transform.sizeDelta = new Vector2(sizeX / 2, 30);
-                    transform.anchorMin = transform.anchorMax = transform.pivot = new Vector2(1, 0.5f);
-                    transform.anchoredPosition = new Vector2(-10, 0);
-                }
-                else
-                {
-                    transform.sizeDelta = new Vector2(sizeX - 4, 16);
-                    transform.anchorMin = transform.anchorMax = transform.pivot = new Vector2(0.5f, 0);
-                    transform.anchoredPosition = new Vector2(0, 2);
-                }
-                transform.localScale = Vector3.one;
-                text = gameObject.AddComponent<TextMeshProUGUI>();
-                var countFont = GetCurrentFont();
-                if (countFont != null)
-                {
-                    text.font = countFont;
-                    var mat = GetShadowMaterial(countFont);
-                    if (mat != null) text.fontMaterial = mat;
-                }
-                text.fontStyle = (FontStyles)settings.FontStyleFlags;
-                text.enableAutoSizing = true;
-                text.fontSizeMin = 0;
-                text.fontSizeMax = 20;
-                text.raycastTarget = false;
-                text.alignment = slim ? TextAlignmentOptions.Right : TextAlignmentOptions.Top;
-                text.color = settings.Text;
-                key.value = text;
-            }
-            // Set initial text content / 设置初始文本内容
-            UpdateKeyText(key, i);
-            // Rain effect container (one per key, shared across all rain drops) / 雨滴效果容器（每个按键一个，所有雨滴共享）
+            return text;
+        }
+
+        private static void SetupRainContainer(Key key, GameObject parent, float sizeX, int raining)
+        {
             if (raining >= 0)
             {
                 if (key.rain == null)
                 {
                     key.rain = new GameObject("RainLine");
-                    transform = key.rain.AddComponent<RectTransform>();
-                    transform.SetParent(obj.transform);
-                    transform.sizeDelta = new Vector2(sizeX, 275);
-                    transform.anchorMin = transform.anchorMax = transform.pivot = Vector2.zero;
-                    // Position rain container below the key / 将雨滴容器放在按键下方
-                    transform.anchoredPosition = new Vector2(0, raining switch
+                    RectTransform rt = key.rain.AddComponent<RectTransform>();
+                    rt.SetParent(parent.transform);
+                    rt.sizeDelta = new Vector2(sizeX, 275);
+                    rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;
+                    rt.anchoredPosition = new Vector2(0, raining switch
                     {
-                        0 => -223,  // Row 1 offset / 第1排偏移
-                        3 => -115,  // Row 3 offset / 第3排偏移
-                        _ => -169   // Row 2 offset / 第2排偏移
+                        0 => -223,
+                        3 => -115,
+                        _ => -169
                     });
-                    transform.localScale = Vector3.one;
+                    rt.localScale = Vector3.one;
                     key.rain.AddComponent<Canvas>();
                     key.rain.AddComponent<GraphicRaycaster>();
                 }
@@ -424,30 +400,33 @@ namespace JipperKeyViewer.KeyViewer
                 key.rain?.SetActive(false);
                 key.rain = null;
             }
-            int pi = i >= 0 && i < Keys.Length ? i : i == -1 ? 36 : i == -2 ? 37 : -1;
+        }
+
+        private int KeyIndex(int i) => i >= 0 && i < Keys.Length ? i : i == -1 ? 36 : i == -2 ? 37 : -1;
+
+        private void ApplyKeyColors(Key key, int i, int raining)
+        {
+            int pi = KeyIndex(i);
             if (Settings.EnablePerKeyColors)
             {
-                if (pi >= 0)
-                {
-                    key.background.color = Settings.PerKeyBackground[pi];
-                    key.outline.color = Settings.PerKeyOutline[pi];
-                    key.text.color = Settings.PerKeyText[pi];
-                    if (key.value != null) key.value.color = Settings.PerKeyText[pi];
-                    key.rainColor = Settings.PerKeyRainColor[pi];
-                }
+                if (pi < 0) return;
+                key.background.color = Settings.PerKeyBackground[pi];
+                key.outline.color = Settings.PerKeyOutline[pi];
+                key.text.color = Settings.PerKeyText[pi];
+                if (key.value != null) key.value.color = Settings.PerKeyText[pi];
+                key.rainColor = Settings.PerKeyRainColor[pi];
+                return;
             }
-            else if (pi >= 36)
+            if (pi >= 36)
             {
-                key.background.color = pi == 36 ? Settings.KpsBackground : Settings.TotalBackground;
-                key.outline.color = pi == 36 ? Settings.KpsOutline : Settings.TotalOutline;
-                key.text.color = pi == 36 ? Settings.KpsText : Settings.TotalText;
+                bool isKps = pi == 36;
+                key.background.color = isKps ? Settings.KpsBackground : Settings.TotalBackground;
+                key.outline.color = isKps ? Settings.KpsOutline : Settings.TotalOutline;
+                key.text.color = isKps ? Settings.KpsText : Settings.TotalText;
                 if (key.value != null) key.value.color = key.text.color;
             }
-            if (!Settings.EnablePerKeyColors && raining >= 0)
-            {
+            if (raining >= 0)
                 key.rainColor = rainSystem.GetRainColor((byte)raining);
-            }
-            return key;
         }
 
         /// <summary>
@@ -541,25 +520,21 @@ namespace JipperKeyViewer.KeyViewer
             RepositionMainKeys(GetLayout(Settings.KeyViewerStyle), baseX, baseY);
         }
 
+        private static int FootKeySize(FootKeyviewerStyle style) => style switch
+        {
+            FootKeyviewerStyle.Key2 => 2,   FootKeyviewerStyle.Key4 => 4,
+            FootKeyviewerStyle.Key6 => 6,   FootKeyviewerStyle.Key8 => 8,
+            FootKeyviewerStyle.Key10 => 10, FootKeyviewerStyle.Key12 => 12,
+            FootKeyviewerStyle.Key14 => 14, FootKeyviewerStyle.Key16 => 16,
+            _ => 0
+        };
+
         private void ResetFootKeyViewerPosition()
         {
             if (Keys == null || !Settings.CustomPositionEnabled) return;
             Vector2 norm = Settings.FootKeyViewerPosition;
-            // Convert normalized (X: 0=left 1=right, Y: 0=top 1=bottom) to reference pixel offsets from bottom-left.
-            // Foot keys are slim (h=30, half=15); offset so Y=1 aligns bottom edge with screen edge.
-            int size = 0;
-            switch (Settings.FootKeyViewerStyle)
-            {
-                case FootKeyviewerStyle.Key2: size = 2; break;
-                case FootKeyviewerStyle.Key4: size = 4; break;
-                case FootKeyviewerStyle.Key6: size = 6; break;
-                case FootKeyviewerStyle.Key8: size = 8; break;
-                case FootKeyviewerStyle.Key10: size = 10; break;
-                case FootKeyviewerStyle.Key12: size = 12; break;
-                case FootKeyviewerStyle.Key14: size = 14; break;
-                case FootKeyviewerStyle.Key16: size = 16; break;
-                default: return;
-            }
+            int size = FootKeySize(Settings.FootKeyViewerStyle);
+            if (size == 0) return;
             float r = GetFootLayoutRightmostOffset(size);
             float baseX = norm.x * (CanvasWidth - r);
             // Y: lerp so Y=0 = top edge at screen top, Y=1 = bottom edge at screen bottom
@@ -660,88 +635,84 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
 
-        /// <summary>
-        /// Apply current color settings to all key elements / 将当前颜色设置应用到所有按键元素
-        /// </summary>
         private void UpdateAllKeyColors()
         {
             if (Keys == null) return;
             if (Settings.EnablePerKeyColors)
-            {
-                for (int i = 0; i < Keys.Length; i++)
-                {
-                    if (Keys[i] == null) continue;
-                    Keys[i].background.color = Settings.PerKeyBackground[i];
-                    Keys[i].outline.color = Settings.PerKeyOutline[i];
-                    Keys[i].text.color = Settings.PerKeyText[i];
-                    if (Keys[i].value != null) Keys[i].value.color = Settings.PerKeyText[i];
-                    Keys[i].rainColor = Settings.PerKeyRainColor[i];
-                }
-            }
+                ApplyPerKeyColorsToAll();
             else
+                ApplyGlobalColorsToAll();
+            ApplyKpsTotalColors();
+        }
+
+        private void ApplyKpsTotalColors()
+        {
+            ApplyColorToKey(Kps, 36);
+            ApplyColorToKey(Total, 37);
+        }
+
+        private void ApplyColorToKey(Key k, int pi)
+        {
+            if (k == null) return;
+            if (Settings.EnablePerKeyColors)
             {
-                KeyCode[] keyCodes = GetKeyCode();
-                KeyCode[] footKeyCodes = GetFootKeyCode();
-                for (int i = 0; i < keyCodes.Length && i < Keys.Length; i++)
-                {
-                    if (Keys[i] != null)
-                    {
-                        Keys[i].background.color = Settings.Background;
-                        Keys[i].outline.color = Settings.Outline;
-                        Keys[i].text.color = Settings.Text;
-                        if (Keys[i].value != null) Keys[i].value.color = Settings.Text;
-                        Keys[i].rainColor = rainSystem.GetRainColor(Keys[i].color);
-                    }
-                }
-                if (footKeyCodes != null)
-                {
-                    for (int i = 0; i < footKeyCodes.Length; i++)
-                    {
-                        int index = i + 20;
-                        if (index < Keys.Length && Keys[index] != null)
-                        {
-                            Keys[index].background.color = Settings.Background;
-                            Keys[index].outline.color = Settings.Outline;
-                            Keys[index].text.color = Settings.Text;
-                            if (Keys[index].value != null) Keys[index].value.color = Settings.Text;
-                        }
-                    }
-                }
+                k.background.color = Settings.PerKeyBackground[pi];
+                k.outline.color = Settings.PerKeyOutline[pi];
+                k.text.color = Settings.PerKeyText[pi];
+                if (k.value != null) k.value.color = Settings.PerKeyText[pi];
             }
-            void ApplyGlobalOrPerKey(Key k, int pi)
+            else if (pi == 36)
             {
-                if (k == null) return;
-                if (Settings.EnablePerKeyColors)
-                {
-                    k.background.color = Settings.PerKeyBackground[pi];
-                    k.outline.color = Settings.PerKeyOutline[pi];
-                    k.text.color = Settings.PerKeyText[pi];
-                    if (k.value != null) k.value.color = Settings.PerKeyText[pi];
-                }
-                else if (pi == 36) // KPS
-                {
-                    k.background.color = Settings.KpsBackground;
-                    k.outline.color = Settings.KpsOutline;
-                    k.text.color = Settings.KpsText;
-                    if (k.value != null) k.value.color = Settings.KpsText;
-                }
-                else if (pi == 37) // Total
-                {
-                    k.background.color = Settings.TotalBackground;
-                    k.outline.color = Settings.TotalOutline;
-                    k.text.color = Settings.TotalText;
-                    if (k.value != null) k.value.color = Settings.TotalText;
-                }
-                else
-                {
-                    k.background.color = Settings.Background;
-                    k.outline.color = Settings.Outline;
-                    k.text.color = Settings.Text;
-                    if (k.value != null) k.value.color = Settings.Text;
-                }
+                k.background.color = Settings.KpsBackground;
+                k.outline.color = Settings.KpsOutline;
+                k.text.color = Settings.KpsText;
+                if (k.value != null) k.value.color = Settings.KpsText;
             }
-            ApplyGlobalOrPerKey(Kps, 36);
-            ApplyGlobalOrPerKey(Total, 37);
+            else if (pi == 37)
+            {
+                k.background.color = Settings.TotalBackground;
+                k.outline.color = Settings.TotalOutline;
+                k.text.color = Settings.TotalText;
+                if (k.value != null) k.value.color = Settings.TotalText;
+            }
+        }
+
+        private void ApplyPerKeyColorsToAll()
+        {
+            for (int i = 0; i < Keys.Length; i++)
+            {
+                if (Keys[i] == null) continue;
+                Keys[i].background.color = Settings.PerKeyBackground[i];
+                Keys[i].outline.color = Settings.PerKeyOutline[i];
+                Keys[i].text.color = Settings.PerKeyText[i];
+                if (Keys[i].value != null) Keys[i].value.color = Settings.PerKeyText[i];
+                Keys[i].rainColor = Settings.PerKeyRainColor[i];
+            }
+        }
+
+        private void ApplyGlobalColorsToAll()
+        {
+            KeyCode[] keyCodes = GetKeyCode();
+            for (int i = 0; i < keyCodes.Length && i < Keys.Length; i++)
+            {
+                if (Keys[i] == null) continue;
+                Keys[i].background.color = Settings.Background;
+                Keys[i].outline.color = Settings.Outline;
+                Keys[i].text.color = Settings.Text;
+                if (Keys[i].value != null) Keys[i].value.color = Settings.Text;
+                Keys[i].rainColor = rainSystem.GetRainColor(Keys[i].color);
+            }
+            KeyCode[] footKeyCodes = GetFootKeyCode();
+            if (footKeyCodes == null) return;
+            for (int i = 0; i < footKeyCodes.Length; i++)
+            {
+                int index = i + 20;
+                if (index >= Keys.Length || Keys[index] == null) continue;
+                Keys[index].background.color = Settings.Background;
+                Keys[index].outline.color = Settings.Outline;
+                Keys[index].text.color = Settings.Text;
+                if (Keys[index].value != null) Keys[index].value.color = Settings.Text;
+            }
         }
 
         /// <summary>
@@ -813,17 +784,8 @@ namespace JipperKeyViewer.KeyViewer
                 }
             }
             rainSystem.ClearPool();
-            switch (Settings.FootKeyViewerStyle)
-            {
-                case FootKeyviewerStyle.Key2:  InitializeFootKeyViewer(2);  break;
-                case FootKeyviewerStyle.Key4:  InitializeFootKeyViewer(4);  break;
-                case FootKeyviewerStyle.Key6:  InitializeFootKeyViewer(6);  break;
-                case FootKeyviewerStyle.Key8:  InitializeFootKeyViewer(8);  break;
-                case FootKeyviewerStyle.Key10: InitializeFootKeyViewer(10); break;
-                case FootKeyviewerStyle.Key12: InitializeFootKeyViewer(12); break;
-                case FootKeyviewerStyle.Key14: InitializeFootKeyViewer(14); break;
-                case FootKeyviewerStyle.Key16: InitializeFootKeyViewer(16); break;
-            }
+            int footSize = FootKeySize(Settings.FootKeyViewerStyle);
+            if (footSize > 0) InitializeFootKeyViewer(footSize);
             if (Settings.CustomPositionEnabled)
                 ResetFootKeyViewerPosition();
             RefreshAllCountDisplay();

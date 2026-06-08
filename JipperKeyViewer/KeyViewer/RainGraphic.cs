@@ -46,7 +46,7 @@ namespace JipperKeyViewer.KeyViewer
 
             if (fade <= 0.5f || trackH <= 0.5f || span <= 0.0001f)
             {
-                AddQuad(vh, xL, yB, xR, yT, baseCol, baseCol);
+                AddQuad(vh, new Rect(xL, yB, xR - xL, yT - yB), baseCol, baseCol);
                 return;
             }
 
@@ -60,10 +60,11 @@ namespace JipperKeyViewer.KeyViewer
 
             if (!crosses)
             {
+                var fullRect = new Rect(xL, yB, xR - xL, yT - yB);
                 if (reverseFade)
-                    AddQuad(vh, xL, yB, xR, yT, colFar, colNear);
+                    AddQuad(vh, fullRect, colFar, colNear);
                 else
-                    AddQuad(vh, xL, yB, xR, yT, colNear, colFar);
+                    AddQuad(vh, fullRect, colNear, colFar);
                 return;
             }
 
@@ -71,14 +72,14 @@ namespace JipperKeyViewer.KeyViewer
             if (reverseFade)
             {
                 float yMid = yT - t * h;
-                AddQuad(vh, xL, yMid, xR, yT, baseCol, colNear);
-                AddQuad(vh, xL, yB, xR, yMid, colFar, baseCol);
+                AddQuad(vh, new Rect(xL, yMid, xR - xL, yT - yMid), baseCol, colNear);
+                AddQuad(vh, new Rect(xL, yB, xR - xL, yMid - yB), colFar, baseCol);
             }
             else
             {
                 float yMid = yB + t * h;
-                AddQuad(vh, xL, yB, xR, yMid, colNear, baseCol);
-                AddQuad(vh, xL, yMid, xR, yT, baseCol, colFar);
+                AddQuad(vh, new Rect(xL, yB, xR - xL, yMid - yB), colNear, baseCol);
+                AddQuad(vh, new Rect(xL, yMid, xR - xL, yT - yMid), baseCol, colFar);
             }
         }
 
@@ -89,14 +90,14 @@ namespace JipperKeyViewer.KeyViewer
             return (trackH - d) / fade;
         }
 
-        private static void AddQuad(VertexHelper vh, float xL, float yB, float xR, float yT, Color bot, Color top)
+        private static void AddQuad(VertexHelper vh, Rect r, Color bot, Color top)
         {
             int i = vh.currentVertCount;
             UIVertex v = UIVertex.simpleVert;
-            v.position = new Vector3(xL, yB, 0f); v.color = bot; vh.AddVert(v);
-            v.position = new Vector3(xR, yB, 0f); v.color = bot; vh.AddVert(v);
-            v.position = new Vector3(xR, yT, 0f); v.color = top; vh.AddVert(v);
-            v.position = new Vector3(xL, yT, 0f); v.color = top; vh.AddVert(v);
+            v.position = new Vector3(r.xMin, r.yMin, 0f); v.color = bot; vh.AddVert(v);
+            v.position = new Vector3(r.xMax, r.yMin, 0f); v.color = bot; vh.AddVert(v);
+            v.position = new Vector3(r.xMax, r.yMax, 0f); v.color = top; vh.AddVert(v);
+            v.position = new Vector3(r.xMin, r.yMax, 0f); v.color = top; vh.AddVert(v);
             vh.AddTriangle(i, i + 1, i + 2);
             vh.AddTriangle(i, i + 2, i + 3);
         }
