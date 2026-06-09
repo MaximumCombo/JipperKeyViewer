@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -14,6 +15,12 @@ namespace JipperKeyViewer.KeyViewer
     /// </summary>
     public partial class KeyViewer : MonoBehaviour
     {
+        // ===== Profile UI state / 配置选择器 UI 状态 =====
+        bool profileExpanded;
+        bool profileIsRenaming;
+        string profileRenameBuffer = "";
+        string profileSaveAsBuffer = "";
+
         private static float FloatSliderField(GUIContent label, float value, float min, float max, string format = "F2")
         {
             GUILayout.BeginHorizontal();
@@ -56,6 +63,7 @@ namespace JipperKeyViewer.KeyViewer
         public void DrawSettingsWindow()
         {
             GUILayout.BeginVertical();
+            DrawProfileSection();
             DrawLanguageSection();
             DrawCountResetSection();
             DrawFontSection();
@@ -71,6 +79,108 @@ namespace JipperKeyViewer.KeyViewer
             GUILayout.Space(5);
             DrawColorSection();
             GUILayout.EndVertical();
+        }
+
+        private void DrawProfileSection()
+        {
+            GUILayout.BeginVertical("box");
+            DrawProfileFoldout();
+            if (profileExpanded)
+            {
+                SyncProfilesWithDisk();
+                DrawProfileList();
+                GUILayout.Space(3);
+                GUILayout.BeginHorizontal();
+                DrawProfileSaveAs();
+                DrawProfileRenameButton();
+                DrawProfileDeleteButton();
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndVertical();
+            GUILayout.Space(5);
+        }
+
+        private void DrawProfileFoldout()
+        {
+            string label = I18n.Tr("profile") + ": " + Settings.CurrentProfile;
+            if (GUILayout.Button((profileExpanded ? "\u25BC " : "\u25B6 ") + label, GUILayout.MinWidth(200)))
+                profileExpanded = !profileExpanded;
+        }
+
+        private void DrawProfileList()
+        {
+            if (Settings.ProfileNames == null) return;
+            for (int i = 0; i < Settings.ProfileNames.Length; i++)
+            {
+                string p = Settings.ProfileNames[i];
+                bool selected = p == Settings.CurrentProfile;
+                if (GUILayout.Button((selected ? "\u2713 " : "  ") + p, GUILayout.MinWidth(200)))
+                {
+                    if (!selected) SwitchProfile(p);
+                    profileExpanded = false;
+                }
+            }
+        }
+
+        private void DrawProfileSaveAs()
+        {
+            profileSaveAsBuffer = GUILayout.TextField(profileSaveAsBuffer, GUILayout.Width(120));
+            if (GUILayout.Button(I18n.Tr("save_as"), GUILayout.MinWidth(60)))
+            {
+                string name = SanitizeFileName(profileSaveAsBuffer.Trim());
+                if (string.IsNullOrEmpty(name)) return;
+                if (Settings.ProfileNames != null)
+                    foreach (var p in Settings.ProfileNames)
+                        if (SanitizeFileName(p) == name) return;
+                var list = new List<string>(Settings.ProfileNames ?? new string[0]) { name };
+                Settings.ProfileNames = list.ToArray();
+                Settings.CurrentProfile = name;
+                SaveCurrentProfile();
+                SaveMetaOnly();
+                profileSaveAsBuffer = "";
+                profileExpanded = false;
+            }
+        }
+
+        private void DrawProfileRenameButton()
+        {
+            if (!profileIsRenaming)
+            {
+                if (GUILayout.Button(I18n.Tr("rename"), GUILayout.MinWidth(60)))
+                {
+                    profileIsRenaming = true;
+                    profileRenameBuffer = Settings.CurrentProfile;
+                }
+                return;
+            }
+            profileRenameBuffer = GUILayout.TextField(profileRenameBuffer, GUILayout.Width(100));
+            if (GUILayout.Button("\u2713", GUILayout.Width(24)))
+            {
+                string newName = SanitizeFileName(profileRenameBuffer.Trim());
+                if (!string.IsNullOrEmpty(newName) && newName != SanitizeFileName(Settings.CurrentProfile))
+                {
+                    bool dup = Settings.ProfileNames != null
+                        && Settings.ProfileNames.Any(p => SanitizeFileName(p) == newName);
+                    if (!dup)
+                        RenameProfile(Settings.CurrentProfile, newName);
+                }
+                profileIsRenaming = false;
+                profileExpanded = false;
+            }
+            if (GUILayout.Button("\u2717", GUILayout.Width(24)))
+                profileIsRenaming = false;
+        }
+
+        private void DrawProfileDeleteButton()
+        {
+            bool canDelete = Settings.ProfileNames != null && Settings.ProfileNames.Length > 1;
+            GUI.enabled = canDelete;
+            if (GUILayout.Button(I18n.Tr("delete"), GUILayout.MinWidth(60)))
+            {
+                DeleteProfile(Settings.CurrentProfile);
+                profileExpanded = false;
+            }
+            GUI.enabled = true;
         }
 
         /// <summary>
@@ -112,7 +222,7 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.EndHorizontal();
             }
 
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
             {
                 GUILayout.Label(row3Label + ":");
                 GUILayout.BeginHorizontal();
@@ -183,7 +293,7 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.EndHorizontal();
             }
 
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
             {
                 GUILayout.Label(I18n.Tr("row3_keys") + ":");
                 GUILayout.BeginHorizontal();
@@ -331,9 +441,9 @@ namespace JipperKeyViewer.KeyViewer
             };
             for (int i = 0; i < 12; i++)
             {
-                if (i >= 6 && i < 9 && !Settings.EnableRainEffect)
+                if (i >= 6 && i < 9 && !Settings.Data.EnableRainEffect)
                     continue;
-                if (i >= 9 && !Settings.EnableGhostRain)
+                if (i >= 9 && !Settings.Data.EnableGhostRain)
                     continue;
                 ColorExpanded[i] = DrawFoldoutButton(colorNames[i], ColorExpanded[i]);
                 if (ColorExpanded[i])
@@ -365,22 +475,22 @@ namespace JipperKeyViewer.KeyViewer
         int totalColorType = -1;
 
         private static Color KpsTotalColor(int pi, int t) => pi == 36
-            ? t switch { 0 => Settings.KpsBackground, 1 => Settings.KpsOutline, _ => Settings.KpsText }
-            : t switch { 0 => Settings.TotalBackground, 1 => Settings.TotalOutline, _ => Settings.TotalText };
+            ? t switch { 0 => Settings.Data.KpsBackground, 1 => Settings.Data.KpsOutline, _ => Settings.Data.KpsText }
+            : t switch { 0 => Settings.Data.TotalBackground, 1 => Settings.Data.TotalOutline, _ => Settings.Data.TotalText };
 
         private static void SetKpsTotalColor(int pi, int t, Color c)
         {
             if (pi == 36)
             {
-                if (t == 0) Settings.KpsBackground = c;
-                else if (t == 1) Settings.KpsOutline = c;
-                else Settings.KpsText = c;
+                if (t == 0) Settings.Data.KpsBackground = c;
+                else if (t == 1) Settings.Data.KpsOutline = c;
+                else Settings.Data.KpsText = c;
             }
             else
             {
-                if (t == 0) Settings.TotalBackground = c;
-                else if (t == 1) Settings.TotalOutline = c;
-                else Settings.TotalText = c;
+                if (t == 0) Settings.Data.TotalBackground = c;
+                else if (t == 1) Settings.Data.TotalOutline = c;
+                else Settings.Data.TotalText = c;
             }
         }
 
@@ -469,7 +579,7 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.EndHorizontal();
             }
 
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
             {
                 GUILayout.Label(I18n.Tr("row3_keys") + ":");
                 GUILayout.BeginHorizontal();
@@ -503,7 +613,7 @@ namespace JipperKeyViewer.KeyViewer
                 DrawPerKeyColorEditor(perKeyColorSelected);
 
             if (GUILayout.Button(I18n.Tr("per_key_color_reset")))
-                { Settings.InitPerKeyColors(); UpdateAllKeyColors(); SaveSettings(); }
+                { Settings.Data.InitPerKeyColors(); UpdateAllKeyColors(); SaveSettings(); }
             if (GUILayout.Button(I18n.Tr("auto_rainbow")))
                 AutoAssignRainbowColors();
 
@@ -512,7 +622,7 @@ namespace JipperKeyViewer.KeyViewer
 
         private void DrawPerKeyColorBtn(int idx, string label)
         {
-            Color c = Settings.PerKeyBackground[idx];
+            Color c = Settings.Data.PerKeyBackground[idx];
             var style = new GUIStyle(GUI.skin.button);
             style.normal.textColor = c.grayscale > 0.5f ? Color.black : Color.white;
             if (perKeyColorSelected == idx)
@@ -550,6 +660,7 @@ namespace JipperKeyViewer.KeyViewer
         {
             GUILayout.Space(5);
             GUILayout.Label("Key " + s + " (" + PerKeyLabel(s) + ")");
+            // Foot keys (s >= 20) intentionally skip rain color; PerKeyTypeOrder excludes type 6 for them
             string rainKey = s < 8 ? "color_rain1" : s < 16 ? "color_rain2" : s < 20 ? "color_rain3" : "";
 
             string[] typeNames = {
@@ -559,10 +670,10 @@ namespace JipperKeyViewer.KeyViewer
                 I18n.Tr(rainKey) + " (" + s + ")"
             };
             Color[] values = {
-                Settings.PerKeyBackground[s], Settings.PerKeyBackgroundClicked[s],
-                Settings.PerKeyOutline[s], Settings.PerKeyOutlineClicked[s],
-                Settings.PerKeyText[s], Settings.PerKeyTextClicked[s],
-                Settings.PerKeyRainColor[s]
+                Settings.Data.PerKeyBackground[s], Settings.Data.PerKeyBackgroundClicked[s],
+                Settings.Data.PerKeyOutline[s], Settings.Data.PerKeyOutlineClicked[s],
+                Settings.Data.PerKeyText[s], Settings.Data.PerKeyTextClicked[s],
+                Settings.Data.PerKeyRainColor[s]
             };
             Color[] defaults = {
                 Background, BackgroundClicked, Outline, OutlineClicked, Text, TextClicked, RainColor
@@ -588,7 +699,7 @@ namespace JipperKeyViewer.KeyViewer
                 GUILayout.EndHorizontal();
             }
 
-            if (s < 36 && Settings.Count != null && s < Settings.Count.Length)
+            if (s < 36 && Settings.Data.Count != null && s < Settings.Data.Count.Length)
                 DrawPerKeyCountReset(s);
         }
 
@@ -596,13 +707,13 @@ namespace JipperKeyViewer.KeyViewer
         {
             switch (t)
             {
-                case 0: Settings.PerKeyBackground[s] = color; break;
-                case 1: Settings.PerKeyBackgroundClicked[s] = color; break;
-                case 2: Settings.PerKeyOutline[s] = color; break;
-                case 3: Settings.PerKeyOutlineClicked[s] = color; break;
-                case 4: Settings.PerKeyText[s] = color; break;
-                case 5: Settings.PerKeyTextClicked[s] = color; break;
-                case 6: Settings.PerKeyRainColor[s] = color; break;
+                case 0: Settings.Data.PerKeyBackground[s] = color; break;
+                case 1: Settings.Data.PerKeyBackgroundClicked[s] = color; break;
+                case 2: Settings.Data.PerKeyOutline[s] = color; break;
+                case 3: Settings.Data.PerKeyOutlineClicked[s] = color; break;
+                case 4: Settings.Data.PerKeyText[s] = color; break;
+                case 5: Settings.Data.PerKeyTextClicked[s] = color; break;
+                case 6: Settings.Data.PerKeyRainColor[s] = color; break;
             }
         }
 
@@ -610,9 +721,9 @@ namespace JipperKeyViewer.KeyViewer
         {
             GUILayout.Space(5);
             var redStyle = new GUIStyle(GUI.skin.button) { normal = { textColor = Color.red } };
-            if (GUILayout.Button(I18n.Tr("reset_counts") + " (" + Settings.Count[s] + ")", redStyle))
+            if (GUILayout.Button(I18n.Tr("reset_counts") + " (" + Settings.Data.Count[s] + ")", redStyle))
             {
-                Settings.Count[s] = 0;
+                Settings.Data.Count[s] = 0;
                 if (keyPressTimes != null && s < keyPressTimes.Length && keyPressTimes[s] != null)
                     keyPressTimes[s].Clear();
                 if (lastPerKeyKps != null && s < lastPerKeyKps.Length)
@@ -641,7 +752,7 @@ namespace JipperKeyViewer.KeyViewer
 
         private string BuildFontStyleSummary()
         {
-            int f = Settings.FontStyleFlags;
+            int f = Settings.Data.FontStyleFlags;
             if (f == 0) return "Normal";
             var parts = new List<string>(4);
             foreach (var (flag, label) in FontStyleFlagLabels)
@@ -666,10 +777,10 @@ namespace JipperKeyViewer.KeyViewer
 
         private void DrawCountResetSection()
         {
-            bool newEnabled = GUILayout.Toggle(Settings.Enabled, (Settings.Enabled ? "\u2713 " : "\u2717 ") + I18n.Tr("key_display_on"));
-            if (newEnabled != Settings.Enabled)
+            bool newEnabled = GUILayout.Toggle(Settings.Data.Enabled, (Settings.Data.Enabled ? "\u2713 " : "\u2717 ") + I18n.Tr("key_display_on"));
+            if (newEnabled != Settings.Data.Enabled)
             {
-                Settings.Enabled = newEnabled;
+                Settings.Data.Enabled = newEnabled;
                 SaveSettings();
             }
 
@@ -680,10 +791,10 @@ namespace JipperKeyViewer.KeyViewer
                 ExecuteCountReset();
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            bool newFormatting = GUILayout.Toggle(Settings.EnableCountFormatting, I18n.Tr("count_formatting"));
-            if (newFormatting != Settings.EnableCountFormatting)
+            bool newFormatting = GUILayout.Toggle(Settings.Data.EnableCountFormatting, I18n.Tr("count_formatting"));
+            if (newFormatting != Settings.Data.EnableCountFormatting)
             {
-                Settings.EnableCountFormatting = newFormatting;
+                Settings.Data.EnableCountFormatting = newFormatting;
                 SaveSettings();
                 RefreshAllCountDisplay();
             }
@@ -693,17 +804,10 @@ namespace JipperKeyViewer.KeyViewer
         private void ExecuteCountReset()
         {
             lastTotal = -1;
-            lastKps = -1;
-            Settings.TotalCount = 0;
-            for (int i = 0; i < Settings.Count.Length; i++)
-                Settings.Count[i] = 0;
-            PressTimes?.Clear();
-            if (keyPressTimes != null)
-                for (int i = 0; i < keyPressTimes.Length; i++)
-                    keyPressTimes[i]?.Clear();
-            if (lastPerKeyKps != null)
-                for (int i = 0; i < lastPerKeyKps.Length; i++)
-                    lastPerKeyKps[i] = 0;
+            Settings.Data.TotalCount = 0;
+            for (int i = 0; i < Settings.Data.Count.Length; i++)
+                Settings.Data.Count[i] = 0;
+            ClearKpsTimers();
             if (Keys != null)
                 for (int i = 0; i < Keys.Length; i++)
                     if (Keys[i]?.value != null)
@@ -716,24 +820,24 @@ namespace JipperKeyViewer.KeyViewer
         private void DrawFontSection()
         {
             GUILayout.Label(I18n.Tr("font_style") + ":");
-            string curFont = fontList.Count > 0 ? fontList[Mathf.Clamp(Settings.FontIndex, 0, fontList.Count - 1)].name : "None";
+            string curFont = fontList.Count > 0 ? fontList[Mathf.Clamp(Settings.Data.FontIndex, 0, fontList.Count - 1)].name : "None";
             if (GUILayout.Button((fontListExpanded ? "\u25BC " : "\u25B6 ") + curFont, GUILayout.MinWidth(200)))
                 fontListExpanded = !fontListExpanded;
             if (fontListExpanded)
             {
                 if (fontList.Count > 0)
                 {
-                    int newIdx = Settings.FontIndex;
+                    int newIdx = Settings.Data.FontIndex;
                     for (int i = 0; i < fontList.Count; i++)
                     {
-                        bool selected = i == Settings.FontIndex;
+                        bool selected = i == Settings.Data.FontIndex;
                         if (GUILayout.Button((selected ? "\u2713 " : "  ") + fontList[i].name, GUILayout.MinWidth(200)))
                             newIdx = i;
                     }
-                    if (newIdx != Settings.FontIndex)
+                    if (newIdx != Settings.Data.FontIndex)
                     {
-                        Settings.FontIndex = newIdx;
-                        Settings.FontName = fontList[newIdx].name;
+                        Settings.Data.FontIndex = newIdx;
+                        Settings.Data.FontName = fontList[newIdx].name;
                         fontRestored = false;
                         UpdateAllFonts();
                         SaveSettings();
@@ -760,18 +864,18 @@ namespace JipperKeyViewer.KeyViewer
                 bool changed = false;
                 for (int i = 0; i < styleFlags.Length; i++)
                 {
-                    bool active = (Settings.FontStyleFlags & styleFlags[i]) != 0;
+                    bool active = (Settings.Data.FontStyleFlags & styleFlags[i]) != 0;
                     bool newActive = GUILayout.Toggle(active, styleNames[i]);
                     if (newActive != active)
                     {
                         if (newActive)
                         {
                             if (styleGroups[i] == 1)
-                                Settings.FontStyleFlags &= ~(8 | 16 | 32);
+                                Settings.Data.FontStyleFlags &= ~(8 | 16 | 32);
                             else if (styleGroups[i] == 2)
-                                Settings.FontStyleFlags &= ~(128 | 256);
+                                Settings.Data.FontStyleFlags &= ~(128 | 256);
                         }
-                        Settings.FontStyleFlags = newActive ? Settings.FontStyleFlags | styleFlags[i] : Settings.FontStyleFlags & ~styleFlags[i];
+                        Settings.Data.FontStyleFlags = newActive ? Settings.Data.FontStyleFlags | styleFlags[i] : Settings.Data.FontStyleFlags & ~styleFlags[i];
                         changed = true;
                     }
                 }
@@ -801,10 +905,10 @@ namespace JipperKeyViewer.KeyViewer
             }
             GUILayout.EndHorizontal();
 
-            bool newDownLocation = GUILayout.Toggle(Settings.DownLocation, I18n.Tr("place_below"));
-            if (newDownLocation != Settings.DownLocation)
+            bool newDownLocation = GUILayout.Toggle(Settings.Data.DownLocation, I18n.Tr("place_below"));
+            if (newDownLocation != Settings.Data.DownLocation)
             {
-                Settings.DownLocation = newDownLocation;
+                Settings.Data.DownLocation = newDownLocation;
                 ResetKeyViewer();
                 ResetFootKeyViewer();
                 SaveSettings();
@@ -813,12 +917,12 @@ namespace JipperKeyViewer.KeyViewer
 
         private void DrawCustomPositionSection()
         {
-            bool newCustomPosition = DrawFoldoutButton(I18n.Tr("custom_pos"), Settings.CustomPositionEnabled);
-            if (newCustomPosition != Settings.CustomPositionEnabled)
+            bool newCustomPosition = DrawFoldoutButton(I18n.Tr("custom_pos"), Settings.Data.CustomPositionEnabled);
+            if (newCustomPosition != Settings.Data.CustomPositionEnabled)
             {
-                Settings.CustomPositionEnabled = newCustomPosition;
+                Settings.Data.CustomPositionEnabled = newCustomPosition;
                 SaveSettings();
-                if (Settings.CustomPositionEnabled)
+                if (Settings.Data.CustomPositionEnabled)
                 {
                     ResetKeyViewerPosition();
                     ResetFootKeyViewerPosition();
@@ -830,12 +934,12 @@ namespace JipperKeyViewer.KeyViewer
                 }
             }
 
-            if (Settings.CustomPositionEnabled)
+            if (Settings.Data.CustomPositionEnabled)
             {
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(I18n.Tr("main_key_pos") + ":");
-                Vector2 tempMainPos = Settings.MainKeyViewerPosition;
-                Vector2 tempFootPos = Settings.FootKeyViewerPosition;
+                Vector2 tempMainPos = Settings.Data.MainKeyViewerPosition;
+                Vector2 tempFootPos = Settings.Data.FootKeyViewerPosition;
                 bool positionChanged = false;
 
                 float newMainX = FloatSliderField("X", tempMainPos.x, 0f, 1f);
@@ -851,8 +955,8 @@ namespace JipperKeyViewer.KeyViewer
 
                 if (positionChanged)
                 {
-                    Settings.MainKeyViewerPosition = tempMainPos;
-                    Settings.FootKeyViewerPosition = tempFootPos;
+                    Settings.Data.MainKeyViewerPosition = tempMainPos;
+                    Settings.Data.FootKeyViewerPosition = tempFootPos;
                     ResetKeyViewerPosition();
                     ResetFootKeyViewerPosition();
                     SaveSettings();
@@ -860,8 +964,8 @@ namespace JipperKeyViewer.KeyViewer
 
                 if (GUILayout.Button(I18n.Tr("reset_pos")))
                 {
-                    Settings.MainKeyViewerPosition = new Vector2(0, 1);
-                    Settings.FootKeyViewerPosition = new Vector2(0.24f, 1f);
+                    Settings.Data.MainKeyViewerPosition = new Vector2(0, 1);
+                    Settings.Data.FootKeyViewerPosition = new Vector2(0.24f, 1f);
                     ResetKeyViewerPosition();
                     ResetFootKeyViewerPosition();
                     SaveSettings();
@@ -873,58 +977,58 @@ namespace JipperKeyViewer.KeyViewer
         private void DrawLayoutSection()
         {
             GUILayout.Label(I18n.Tr("key_layout") + ":");
-            KeyviewerStyle newStyle = (KeyviewerStyle)GUILayout.SelectionGrid((int)Settings.KeyViewerStyle, KeyLayoutNames, 3);
-            if (newStyle != Settings.KeyViewerStyle)
+            KeyviewerStyle newStyle = (KeyviewerStyle)GUILayout.SelectionGrid((int)Settings.Data.KeyViewerStyle, KeyLayoutNames, 3);
+            if (newStyle != Settings.Data.KeyViewerStyle)
             {
-                Settings.KeyViewerStyle = newStyle;
+                Settings.Data.KeyViewerStyle = newStyle;
                 ChangeKeyViewer();
                 SaveSettings();
             }
 
             GUILayout.Label(I18n.Tr("foot_keys") + ":");
-            FootKeyviewerStyle newFootStyle = (FootKeyviewerStyle)GUILayout.SelectionGrid((int)Settings.FootKeyViewerStyle, FootKeyLayoutNames, 5);
-            if (newFootStyle != Settings.FootKeyViewerStyle)
+            FootKeyviewerStyle newFootStyle = (FootKeyviewerStyle)GUILayout.SelectionGrid((int)Settings.Data.FootKeyViewerStyle, FootKeyLayoutNames, 5);
+            if (newFootStyle != Settings.Data.FootKeyViewerStyle)
             {
-                Settings.FootKeyViewerStyle = newFootStyle;
+                Settings.Data.FootKeyViewerStyle = newFootStyle;
                 ResetFootKeyViewer();
                 SaveSettings();
             }
 
-            float newSettingsSize = FloatSliderField(I18n.Tr("size"), Settings.Size, 0.1f, 2f);
-            if (newSettingsSize != Settings.Size)
+            float newSettingsSize = FloatSliderField(I18n.Tr("size"), Settings.Data.Size, 0.1f, 2f);
+            if (newSettingsSize != Settings.Data.Size)
             {
-                Settings.Size = newSettingsSize;
+                Settings.Data.Size = newSettingsSize;
                 if (KeyViewerSizeObject != null)
-                    KeyViewerSizeObject.transform.localScale = new Vector3(Settings.Size, Settings.Size, 1);
+                    KeyViewerSizeObject.transform.localScale = new Vector3(Settings.Data.Size, Settings.Data.Size, 1);
                 SaveSettings();
             }
         }
 
         private void DrawDisplaySection()
         {
-            bool newHideCount = GUILayout.Toggle(Settings.HideMainKeyCount, I18n.Tr("hide_main_count"));
-            if (newHideCount != Settings.HideMainKeyCount)
+            bool newHideCount = GUILayout.Toggle(Settings.Data.HideMainKeyCount, I18n.Tr("hide_main_count"));
+            if (newHideCount != Settings.Data.HideMainKeyCount)
             {
-                Settings.HideMainKeyCount = newHideCount;
+                Settings.Data.HideMainKeyCount = newHideCount;
                 ResetKeyViewer();
                 SaveSettings();
             }
 
-            if (!Settings.HideMainKeyCount)
+            if (!Settings.Data.HideMainKeyCount)
             {
-                bool newPerKeyKps = GUILayout.Toggle(Settings.EnablePerKeyKps, I18n.Tr("per_key_kps"));
-                if (newPerKeyKps != Settings.EnablePerKeyKps)
+                bool newPerKeyKps = GUILayout.Toggle(Settings.Data.EnablePerKeyKps, I18n.Tr("per_key_kps"));
+                if (newPerKeyKps != Settings.Data.EnablePerKeyKps)
                 {
-                    Settings.EnablePerKeyKps = newPerKeyKps;
+                    Settings.Data.EnablePerKeyKps = newPerKeyKps;
                     RefreshAllCountDisplay();
                     SaveSettings();
                 }
             }
 
-            bool newStreamer = GUILayout.Toggle(Settings.StreamerMode, I18n.Tr("streamer_mode"));
-            if (newStreamer != Settings.StreamerMode)
+            bool newStreamer = GUILayout.Toggle(Settings.Data.StreamerMode, I18n.Tr("streamer_mode"));
+            if (newStreamer != Settings.Data.StreamerMode)
             {
-                Settings.StreamerMode = newStreamer;
+                Settings.Data.StreamerMode = newStreamer;
                 if (Kps != null) Kps.gameObject.SetActive(!newStreamer);
                 if (Total != null) Total.gameObject.SetActive(!newStreamer);
                 SaveSettings();
@@ -933,84 +1037,87 @@ namespace JipperKeyViewer.KeyViewer
 
         private void DrawRainSection()
         {
-            bool newRainEffect = GUILayout.Toggle(Settings.EnableRainEffect, I18n.Tr("rain_effect"));
-            if (newRainEffect != Settings.EnableRainEffect)
+            RainExpanded = DrawFoldoutButton(I18n.Tr("rain_effect"), RainExpanded);
+            if (!RainExpanded) return;
+
+            bool newRainEffect = GUILayout.Toggle(Settings.Data.EnableRainEffect, I18n.Tr("rain_effect"));
+            if (newRainEffect != Settings.Data.EnableRainEffect)
             {
-                Settings.EnableRainEffect = newRainEffect;
-                if (!Settings.EnableRainEffect)
+                Settings.Data.EnableRainEffect = newRainEffect;
+                if (!Settings.Data.EnableRainEffect)
                     rainSystem.ClearActiveDrops(Keys);
                 SaveSettings();
             }
 
-            if (!Settings.EnableRainEffect) return;
+            if (!Settings.Data.EnableRainEffect) return;
 
             GUILayout.Label(I18n.Tr("rain_rows") + ":");
             GUILayout.BeginHorizontal();
-            Settings.EnableRainForRow1 = GUILayout.Toggle(Settings.EnableRainForRow1, I18n.Tr("rain_row1"));
-            Settings.EnableRainForRow2 = GUILayout.Toggle(Settings.EnableRainForRow2, I18n.Tr("rain_row2"));
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
-                Settings.EnableRainForRow3 = GUILayout.Toggle(Settings.EnableRainForRow3, I18n.Tr("rain_row3"));
+            Settings.Data.EnableRainForRow1 = GUILayout.Toggle(Settings.Data.EnableRainForRow1, I18n.Tr("rain_row1"));
+            Settings.Data.EnableRainForRow2 = GUILayout.Toggle(Settings.Data.EnableRainForRow2, I18n.Tr("rain_row2"));
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
+                Settings.Data.EnableRainForRow3 = GUILayout.Toggle(Settings.Data.EnableRainForRow3, I18n.Tr("rain_row3"));
             GUILayout.EndHorizontal();
 
             GUILayout.Label(I18n.Tr("rain_height") + ":");
-            Settings.RainHeightRow1 = FloatSliderField(I18n.Tr("rain_row1"), Settings.RainHeightRow1, 1f, 2000f);
-            Settings.RainHeightRow2 = FloatSliderField(I18n.Tr("rain_row2"), Settings.RainHeightRow2, 1f, 2000f);
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
-                Settings.RainHeightRow3 = FloatSliderField(I18n.Tr("rain_row3"), Settings.RainHeightRow3, 1f, 2000f);
+            Settings.Data.RainHeightRow1 = FloatSliderField(I18n.Tr("rain_row1"), Settings.Data.RainHeightRow1, 1f, 2000f);
+            Settings.Data.RainHeightRow2 = FloatSliderField(I18n.Tr("rain_row2"), Settings.Data.RainHeightRow2, 1f, 2000f);
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
+                Settings.Data.RainHeightRow3 = FloatSliderField(I18n.Tr("rain_row3"), Settings.Data.RainHeightRow3, 1f, 2000f);
 
             GUILayout.Label(I18n.Tr("rain_speed") + ":");
-            Settings.RainSpeedRow1 = FloatSliderField(I18n.Tr("rain_row1"), Settings.RainSpeedRow1, 50f, 2000f, "F0");
-            Settings.RainSpeedRow2 = FloatSliderField(I18n.Tr("rain_row2"), Settings.RainSpeedRow2, 50f, 2000f, "F0");
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
-                Settings.RainSpeedRow3 = FloatSliderField(I18n.Tr("rain_row3"), Settings.RainSpeedRow3, 50f, 2000f, "F0");
+            Settings.Data.RainSpeedRow1 = FloatSliderField(I18n.Tr("rain_row1"), Settings.Data.RainSpeedRow1, 50f, 2000f, "F0");
+            Settings.Data.RainSpeedRow2 = FloatSliderField(I18n.Tr("rain_row2"), Settings.Data.RainSpeedRow2, 50f, 2000f, "F0");
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
+                Settings.Data.RainSpeedRow3 = FloatSliderField(I18n.Tr("rain_row3"), Settings.Data.RainSpeedRow3, 50f, 2000f, "F0");
 
             GUILayout.Label(I18n.Tr("rain_width") + ":");
-            Settings.RainWidthRow1 = FloatSliderField(I18n.Tr("rain_width_row1"), Settings.RainWidthRow1, 10f, 200f, "F0");
-            Settings.RainWidthRow2 = FloatSliderField(I18n.Tr("rain_width_row2"), Settings.RainWidthRow2, 10f, 200f, "F0");
-            if (Settings.KeyViewerStyle == KeyviewerStyle.Key20)
-                Settings.RainWidthRow3 = FloatSliderField(I18n.Tr("rain_width_row3"), Settings.RainWidthRow3, 10f, 200f, "F0");
+            Settings.Data.RainWidthRow1 = FloatSliderField(I18n.Tr("rain_width_row1"), Settings.Data.RainWidthRow1, 10f, 200f, "F0");
+            Settings.Data.RainWidthRow2 = FloatSliderField(I18n.Tr("rain_width_row2"), Settings.Data.RainWidthRow2, 10f, 200f, "F0");
+            if (Settings.Data.KeyViewerStyle == KeyviewerStyle.Key20)
+                Settings.Data.RainWidthRow3 = FloatSliderField(I18n.Tr("rain_width_row3"), Settings.Data.RainWidthRow3, 10f, 200f, "F0");
 
             GUILayout.Space(5);
-            bool newRainFade = GUILayout.Toggle(Settings.EnableRainFade, I18n.Tr("rain_fade"));
-            if (newRainFade != Settings.EnableRainFade)
+            bool newRainFade = GUILayout.Toggle(Settings.Data.EnableRainFade, I18n.Tr("rain_fade"));
+            if (newRainFade != Settings.Data.EnableRainFade)
             {
-                Settings.EnableRainFade = newRainFade;
+                Settings.Data.EnableRainFade = newRainFade;
                 if (!newRainFade && rainSystem != null && Keys != null)
                     rainSystem.ClearActiveDrops(Keys);
                 SaveSettings();
             }
-            if (Settings.EnableRainFade)
+            if (Settings.Data.EnableRainFade)
             {
-                float newFadeDur = FloatSliderField(I18n.Tr("fade_duration"), Settings.RainFadeDuration, 0.03f, 5.0f);
-                if (newFadeDur != Settings.RainFadeDuration)
+                float newFadeDur = FloatSliderField(I18n.Tr("fade_duration"), Settings.Data.RainFadeDuration, 0.03f, 5.0f);
+                if (newFadeDur != Settings.Data.RainFadeDuration)
                 {
-                    Settings.RainFadeDuration = newFadeDur;
+                    Settings.Data.RainFadeDuration = newFadeDur;
                     SaveSettings();
                 }
             }
 
             GUILayout.Space(5);
-            bool newGradient = GUILayout.Toggle(Settings.EnableRainGradient, I18n.Tr("rain_gradient"));
-            if (newGradient != Settings.EnableRainGradient)
+            bool newGradient = GUILayout.Toggle(Settings.Data.EnableRainGradient, I18n.Tr("rain_gradient"));
+            if (newGradient != Settings.Data.EnableRainGradient)
             {
-                Settings.EnableRainGradient = newGradient;
+                Settings.Data.EnableRainGradient = newGradient;
                 SaveSettings();
             }
-            if (Settings.EnableRainGradient)
+            if (Settings.Data.EnableRainGradient)
             {
-                float newFadePx = FloatSliderField(I18n.Tr("gradient_percent"), Settings.RainFadePx, 1f, 200f, "F0");
-                if (!Mathf.Approximately(newFadePx, Settings.RainFadePx))
+                float newFadePx = FloatSliderField(I18n.Tr("gradient_percent"), Settings.Data.RainFadePx, 1f, 200f, "F0");
+                if (!Mathf.Approximately(newFadePx, Settings.Data.RainFadePx))
                 {
-                    Settings.RainFadePx = newFadePx;
+                    Settings.Data.RainFadePx = newFadePx;
                     SaveSettings();
                 }
             }
 
             GUILayout.Space(5);
-            bool newGhostRain = GUILayout.Toggle(Settings.EnableGhostRain, I18n.Tr("ghost_rain"));
-            if (newGhostRain != Settings.EnableGhostRain)
+            bool newGhostRain = GUILayout.Toggle(Settings.Data.EnableGhostRain, I18n.Tr("ghost_rain"));
+            if (newGhostRain != Settings.Data.EnableGhostRain)
             {
-                Settings.EnableGhostRain = newGhostRain;
+                Settings.Data.EnableGhostRain = newGhostRain;
                 if (!newGhostRain && rainSystem != null && Keys != null)
                     rainSystem.ClearActiveDrops(Keys);
                 SaveSettings();
@@ -1023,7 +1130,7 @@ namespace JipperKeyViewer.KeyViewer
             if (KeyChangeExpanded)
                 DrawKeyChangeSection();
 
-            if (Settings.EnableRainEffect && Settings.EnableGhostRain)
+            if (Settings.Data.EnableRainEffect && Settings.Data.EnableGhostRain)
             {
                 GhostRainChangeExpanded = DrawFoldoutButton(I18n.Tr("ghost_rain"), GhostRainChangeExpanded);
                 if (GhostRainChangeExpanded)
@@ -1042,15 +1149,15 @@ namespace JipperKeyViewer.KeyViewer
             if (!colorsExpanded) ColorExpanded = null;
             if (ColorExpanded == null) return;
 
-            bool pk = GUILayout.Toggle(Settings.EnablePerKeyColors, I18n.Tr("per_key_colors"));
-            if (pk != Settings.EnablePerKeyColors)
+            bool pk = GUILayout.Toggle(Settings.Data.EnablePerKeyColors, I18n.Tr("per_key_colors"));
+            if (pk != Settings.Data.EnablePerKeyColors)
             {
-                Settings.EnablePerKeyColors = pk;
+                Settings.Data.EnablePerKeyColors = pk;
                 ResetKeyViewer();
                 UpdateAllKeyColors();
                 SaveSettings();
             }
-            if (Settings.EnablePerKeyColors)
+            if (Settings.Data.EnablePerKeyColors)
                 DrawPerKeyColorSettings();
             else
                 DrawColorSettings();

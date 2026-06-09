@@ -17,7 +17,7 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private void EnableKeyViewer()
         {
-            if (KeyViewerObject != null || !Settings.Enabled) return;
+            if (KeyViewerObject != null || !Settings.Data.Enabled) return;
             if (!TryLoadResources())
             {
                 Main.Mod.Logger.Error("KeyViewer: Cannot load AssetBundle, please check assets/ directory");
@@ -35,7 +35,7 @@ namespace JipperKeyViewer.KeyViewer
             KeyViewerSizeObject = new GameObject("SizeObject");
             RectTransform rectTransform = KeyViewerSizeObject.AddComponent<RectTransform>();
             rectTransform.SetParent(KeyViewerObject.transform);
-            rectTransform.localScale = new Vector3(Settings.Size, Settings.Size, 1);
+            rectTransform.localScale = new Vector3(Settings.Data.Size, Settings.Data.Size, 1);
             // Fill full canvas with bottom-left pivot so localScale doesn't shift child positions / 填满画布，左下角轴心，使缩放不改变子元素位置
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
@@ -43,12 +43,12 @@ namespace JipperKeyViewer.KeyViewer
             rectTransform.offsetMin = rectTransform.offsetMax = Vector2.zero;
             // Initialize main keys based on selected layout / 根据选中的布局初始化主按键
             Keys = new Key[36];
-            InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
+            InitializeMainKeys(GetLayout(Settings.Data.KeyViewerStyle));
             // Initialize foot keys based on selected layout / 根据选中的布局初始化脚键
-            int footSize = FootKeySize(Settings.FootKeyViewerStyle);
+            int footSize = FootKeySize(Settings.Data.FootKeyViewerStyle);
             if (footSize > 0) InitializeFootKeyViewer(footSize);
             // Apply streamer mode (hide KPS/Total)
-            if (Settings.StreamerMode)
+            if (Settings.Data.StreamerMode)
             {
                 if (Kps != null) Kps.gameObject.SetActive(false);
                 if (Total != null) Total.gameObject.SetActive(false);
@@ -186,7 +186,7 @@ namespace JipperKeyViewer.KeyViewer
 
         private void InitializeMainKeys(LayoutDesc layout)
         {
-            int remove = Settings.DownLocation ? 200 : 0;
+            int remove = Settings.Data.DownLocation ? 200 : 0;
             for (int i = 0; i < 8; i++)
                 Keys[i] = CreateKey(i, 54 * i, layout.frontY - remove, 50, 0);
             foreach (var e in layout.extras)
@@ -200,7 +200,7 @@ namespace JipperKeyViewer.KeyViewer
 
         private void RepositionMainKeys(LayoutDesc layout, float baseX, float baseY)
         {
-            int remove = Settings.DownLocation ? 200 : 0;
+            int remove = Settings.Data.DownLocation ? 200 : 0;
             for (int i = 0; i < 8; i++)
                 SetKeyPosition(i, baseX + 54 * i, baseY + layout.frontY - remove);
             foreach (var e in layout.extras)
@@ -257,7 +257,7 @@ namespace JipperKeyViewer.KeyViewer
         /// <param name="count">Show press count text / 显示按下计数文本</param>
         private Key CreateKey(int i, float x, float y, float sizeX, int raining, bool slim = false, bool count = true)
         {
-            if (i >= 0 && i < 20 && Settings.HideMainKeyCount)
+            if (i >= 0 && i < 20 && Settings.Data.HideMainKeyCount)
                 count = false;
             GameObject obj = new("Key " + i);
             KeyViewerSettings settings = Settings;
@@ -270,8 +270,8 @@ namespace JipperKeyViewer.KeyViewer
             transform.localScale = Vector3.one;
             Key key = obj.AddComponent<Key>();
             key.isPressed = false;
-            key.background = CreateImage(obj, "Background", sizeX, slim, keyBackgroundSprite, settings.Background);
-            key.outline = CreateImage(obj, "Outline", sizeX, slim, keyOutlineSprite, settings.Outline);
+            key.background = CreateImage(obj, "Background", sizeX, slim, keyBackgroundSprite, settings.Data.Background);
+            key.outline = CreateImage(obj, "Outline", sizeX, slim, keyOutlineSprite, settings.Data.Outline);
             key.text = CreateKeyText(obj, sizeX, slim, count, settings);
             if (count)
                 key.value = CreateCountText(obj, sizeX, slim, settings);
@@ -361,12 +361,12 @@ namespace JipperKeyViewer.KeyViewer
                 var mat = GetShadowMaterial(keyFont);
                 if (mat != null) text.fontMaterial = mat;
             }
-            text.fontStyle = (FontStyles)settings.FontStyleFlags;
+            text.fontStyle = (FontStyles)settings.Data.FontStyleFlags;
             text.enableAutoSizing = true;
             text.fontSizeMin = 0;
             text.fontSizeMax = 20;
             text.alignment = alignment;
-            text.color = settings.Text;
+            text.color = settings.Data.Text;
             text.raycastTarget = false;
             return text;
         }
@@ -407,22 +407,22 @@ namespace JipperKeyViewer.KeyViewer
         private void ApplyKeyColors(Key key, int i, int raining)
         {
             int pi = KeyIndex(i);
-            if (Settings.EnablePerKeyColors)
+            if (Settings.Data.EnablePerKeyColors)
             {
                 if (pi < 0) return;
-                key.background.color = Settings.PerKeyBackground[pi];
-                key.outline.color = Settings.PerKeyOutline[pi];
-                key.text.color = Settings.PerKeyText[pi];
-                if (key.value != null) key.value.color = Settings.PerKeyText[pi];
-                key.rainColor = Settings.PerKeyRainColor[pi];
+                key.background.color = Settings.Data.PerKeyBackground[pi];
+                key.outline.color = Settings.Data.PerKeyOutline[pi];
+                key.text.color = Settings.Data.PerKeyText[pi];
+                if (key.value != null) key.value.color = Settings.Data.PerKeyText[pi];
+                key.rainColor = Settings.Data.PerKeyRainColor[pi];
                 return;
             }
             if (pi >= 36)
             {
                 bool isKps = pi == 36;
-                key.background.color = isKps ? Settings.KpsBackground : Settings.TotalBackground;
-                key.outline.color = isKps ? Settings.KpsOutline : Settings.TotalOutline;
-                key.text.color = isKps ? Settings.KpsText : Settings.TotalText;
+                key.background.color = isKps ? Settings.Data.KpsBackground : Settings.Data.TotalBackground;
+                key.outline.color = isKps ? Settings.Data.KpsOutline : Settings.Data.TotalOutline;
+                key.text.color = isKps ? Settings.Data.KpsText : Settings.Data.TotalText;
                 if (key.value != null) key.value.color = key.text.color;
             }
             if (raining >= 0)
@@ -445,7 +445,7 @@ namespace JipperKeyViewer.KeyViewer
             if (i == -2)
             {
                 key.text.text = "Total";
-                if (key.value != null) key.value.text = FormatCount(Settings.TotalCount);
+                if (key.value != null) key.value.text = FormatCount(Settings.Data.TotalCount);
                 return;
             }
             if (i < 20)
@@ -457,7 +457,7 @@ namespace JipperKeyViewer.KeyViewer
                     string displayText = !string.IsNullOrEmpty(keyTexts[i]) ? keyTexts[i] : KeyToString(keyCodes[i]);
                     key.text.text = displayText;
                     if (key.value != null)
-                        key.value.text = FormatCount(Settings.Count[i]);
+                        key.value.text = FormatCount(Settings.Data.Count[i]);
                 }
             }
             else
@@ -479,8 +479,8 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private float GetMinMainKeyOffset()
         {
-            float bottomY = GetLayout(Settings.KeyViewerStyle).bottomY;
-            return Settings.DownLocation ? bottomY - 200 : bottomY;
+            float bottomY = GetLayout(Settings.Data.KeyViewerStyle).bottomY;
+            return Settings.Data.DownLocation ? bottomY - 200 : bottomY;
         }
 
         /// <summary>Total width of the main key layout in reference pixels / 主按键布局的总宽度（参考像素）</summary>
@@ -489,7 +489,7 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Topmost key top edge Y for normalized positioning / 归一化定位中最顶部按键顶边的 Y 值</summary>
         private float GetMaxMainKeyOffset()
         {
-            return GetLayout(Settings.KeyViewerStyle).frontY + 25;
+            return GetLayout(Settings.Data.KeyViewerStyle).frontY + 25;
         }
 
         /// <summary>Width of the foot key section in reference pixels / 脚键区域的宽度（参考像素）</summary>
@@ -505,19 +505,19 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private void ResetKeyViewerPosition()
         {
-            if (Keys == null || !Settings.CustomPositionEnabled) return;
-            Vector2 norm = Settings.MainKeyViewerPosition;
+            if (Keys == null || !Settings.Data.CustomPositionEnabled) return;
+            Vector2 norm = Settings.Data.MainKeyViewerPosition;
             // Convert normalized (X: 0=left 1=right, Y: 0=top 1=bottom) to reference pixel offsets from bottom-left.
             // X: interpolate so X=0 = left edge at screen left, X=1 = right edge at screen right.
             // Y: subtract min layout offset so Y=1 puts the lowest key's bottom edge at screen bottom.
             float r = GetMainLayoutRightmostOffset();
             float baseX = norm.x * (CanvasWidth - r);
-            int remove = Settings.DownLocation ? 200 : 0;
+            int remove = Settings.Data.DownLocation ? 200 : 0;
             // Y: lerp so Y=0 = top edge at screen top, Y=1 = bottom edge at screen bottom
             float topBaseY = 1080f - GetMaxMainKeyOffset() + remove;
             float bottomBaseY = -GetMinMainKeyOffset();
             float baseY = Mathf.Lerp(bottomBaseY, topBaseY, 1f - norm.y);
-            RepositionMainKeys(GetLayout(Settings.KeyViewerStyle), baseX, baseY);
+            RepositionMainKeys(GetLayout(Settings.Data.KeyViewerStyle), baseX, baseY);
         }
 
         private static int FootKeySize(FootKeyviewerStyle style) => style switch
@@ -531,9 +531,9 @@ namespace JipperKeyViewer.KeyViewer
 
         private void ResetFootKeyViewerPosition()
         {
-            if (Keys == null || !Settings.CustomPositionEnabled) return;
-            Vector2 norm = Settings.FootKeyViewerPosition;
-            int size = FootKeySize(Settings.FootKeyViewerStyle);
+            if (Keys == null || !Settings.Data.CustomPositionEnabled) return;
+            Vector2 norm = Settings.Data.FootKeyViewerPosition;
+            int size = FootKeySize(Settings.Data.FootKeyViewerStyle);
             if (size == 0) return;
             float r = GetFootLayoutRightmostOffset(size);
             float baseX = norm.x * (CanvasWidth - r);
@@ -599,18 +599,18 @@ namespace JipperKeyViewer.KeyViewer
         {
             return index switch
             {
-                0 => Settings.Background,
-                1 => Settings.BackgroundClicked,
-                2 => Settings.Outline,
-                3 => Settings.OutlineClicked,
-                4 => Settings.Text,
-                5 => Settings.TextClicked,
-                6 => Settings.RainColor,
-                7 => Settings.RainColor2,
-                8 => Settings.RainColor3,
-                9 => Settings.GhostRainColor,
-                10 => Settings.GhostRainColor2,
-                11 => Settings.GhostRainColor3,
+                0 => Settings.Data.Background,
+                1 => Settings.Data.BackgroundClicked,
+                2 => Settings.Data.Outline,
+                3 => Settings.Data.OutlineClicked,
+                4 => Settings.Data.Text,
+                5 => Settings.Data.TextClicked,
+                6 => Settings.Data.RainColor,
+                7 => Settings.Data.RainColor2,
+                8 => Settings.Data.RainColor3,
+                9 => Settings.Data.GhostRainColor,
+                10 => Settings.Data.GhostRainColor2,
+                11 => Settings.Data.GhostRainColor3,
                 _ => Color.white
             };
         }
@@ -620,25 +620,25 @@ namespace JipperKeyViewer.KeyViewer
         {
             switch (index)
             {
-                case 0: Settings.Background = color; break;
-                case 1: Settings.BackgroundClicked = color; break;
-                case 2: Settings.Outline = color; break;
-                case 3: Settings.OutlineClicked = color; break;
-                case 4: Settings.Text = color; break;
-                case 5: Settings.TextClicked = color; break;
-                case 6: Settings.RainColor = color; break;
-                case 7: Settings.RainColor2 = color; break;
-                case 8: Settings.RainColor3 = color; break;
-                case 9: Settings.GhostRainColor = color; break;
-                case 10: Settings.GhostRainColor2 = color; break;
-                case 11: Settings.GhostRainColor3 = color; break;
+                case 0: Settings.Data.Background = color; break;
+                case 1: Settings.Data.BackgroundClicked = color; break;
+                case 2: Settings.Data.Outline = color; break;
+                case 3: Settings.Data.OutlineClicked = color; break;
+                case 4: Settings.Data.Text = color; break;
+                case 5: Settings.Data.TextClicked = color; break;
+                case 6: Settings.Data.RainColor = color; break;
+                case 7: Settings.Data.RainColor2 = color; break;
+                case 8: Settings.Data.RainColor3 = color; break;
+                case 9: Settings.Data.GhostRainColor = color; break;
+                case 10: Settings.Data.GhostRainColor2 = color; break;
+                case 11: Settings.Data.GhostRainColor3 = color; break;
             }
         }
 
         private void UpdateAllKeyColors()
         {
             if (Keys == null) return;
-            if (Settings.EnablePerKeyColors)
+            if (Settings.Data.EnablePerKeyColors)
                 ApplyPerKeyColorsToAll();
             else
                 ApplyGlobalColorsToAll();
@@ -654,26 +654,26 @@ namespace JipperKeyViewer.KeyViewer
         private void ApplyColorToKey(Key k, int pi)
         {
             if (k == null) return;
-            if (Settings.EnablePerKeyColors)
+            if (Settings.Data.EnablePerKeyColors)
             {
-                k.background.color = Settings.PerKeyBackground[pi];
-                k.outline.color = Settings.PerKeyOutline[pi];
-                k.text.color = Settings.PerKeyText[pi];
-                if (k.value != null) k.value.color = Settings.PerKeyText[pi];
+                k.background.color = Settings.Data.PerKeyBackground[pi];
+                k.outline.color = Settings.Data.PerKeyOutline[pi];
+                k.text.color = Settings.Data.PerKeyText[pi];
+                if (k.value != null) k.value.color = Settings.Data.PerKeyText[pi];
             }
             else if (pi == 36)
             {
-                k.background.color = Settings.KpsBackground;
-                k.outline.color = Settings.KpsOutline;
-                k.text.color = Settings.KpsText;
-                if (k.value != null) k.value.color = Settings.KpsText;
+                k.background.color = Settings.Data.KpsBackground;
+                k.outline.color = Settings.Data.KpsOutline;
+                k.text.color = Settings.Data.KpsText;
+                if (k.value != null) k.value.color = Settings.Data.KpsText;
             }
             else if (pi == 37)
             {
-                k.background.color = Settings.TotalBackground;
-                k.outline.color = Settings.TotalOutline;
-                k.text.color = Settings.TotalText;
-                if (k.value != null) k.value.color = Settings.TotalText;
+                k.background.color = Settings.Data.TotalBackground;
+                k.outline.color = Settings.Data.TotalOutline;
+                k.text.color = Settings.Data.TotalText;
+                if (k.value != null) k.value.color = Settings.Data.TotalText;
             }
         }
 
@@ -682,11 +682,11 @@ namespace JipperKeyViewer.KeyViewer
             for (int i = 0; i < Keys.Length; i++)
             {
                 if (Keys[i] == null) continue;
-                Keys[i].background.color = Settings.PerKeyBackground[i];
-                Keys[i].outline.color = Settings.PerKeyOutline[i];
-                Keys[i].text.color = Settings.PerKeyText[i];
-                if (Keys[i].value != null) Keys[i].value.color = Settings.PerKeyText[i];
-                Keys[i].rainColor = Settings.PerKeyRainColor[i];
+                Keys[i].background.color = Settings.Data.PerKeyBackground[i];
+                Keys[i].outline.color = Settings.Data.PerKeyOutline[i];
+                Keys[i].text.color = Settings.Data.PerKeyText[i];
+                if (Keys[i].value != null) Keys[i].value.color = Settings.Data.PerKeyText[i];
+                Keys[i].rainColor = Settings.Data.PerKeyRainColor[i];
             }
         }
 
@@ -696,11 +696,11 @@ namespace JipperKeyViewer.KeyViewer
             for (int i = 0; i < keyCodes.Length && i < Keys.Length; i++)
             {
                 if (Keys[i] == null) continue;
-                Keys[i].background.color = Settings.Background;
-                Keys[i].outline.color = Settings.Outline;
-                Keys[i].text.color = Settings.Text;
-                if (Keys[i].value != null) Keys[i].value.color = Settings.Text;
-                Keys[i].rainColor = rainSystem.GetRainColor(Keys[i].color);
+                Keys[i].background.color = Settings.Data.Background;
+                Keys[i].outline.color = Settings.Data.Outline;
+                Keys[i].text.color = Settings.Data.Text;
+                if (Keys[i].value != null) Keys[i].value.color = Settings.Data.Text;
+                Keys[i].rainColor = rainSystem?.GetRainColor(Keys[i].color) ?? Settings.Data.RainColor;
             }
             KeyCode[] footKeyCodes = GetFootKeyCode();
             if (footKeyCodes == null) return;
@@ -708,10 +708,10 @@ namespace JipperKeyViewer.KeyViewer
             {
                 int index = i + 20;
                 if (index >= Keys.Length || Keys[index] == null) continue;
-                Keys[index].background.color = Settings.Background;
-                Keys[index].outline.color = Settings.Outline;
-                Keys[index].text.color = Settings.Text;
-                if (Keys[index].value != null) Keys[index].value.color = Settings.Text;
+                Keys[index].background.color = Settings.Data.Background;
+                Keys[index].outline.color = Settings.Data.Outline;
+                Keys[index].text.color = Settings.Data.Text;
+                if (Keys[index].value != null) Keys[index].value.color = Settings.Data.Text;
             }
         }
 
@@ -743,13 +743,13 @@ namespace JipperKeyViewer.KeyViewer
                     Object.Destroy(Kps.gameObject);
             }
             rainSystem.ClearPool();
-            InitializeMainKeys(GetLayout(Settings.KeyViewerStyle));
-            if (Settings.StreamerMode)
+            InitializeMainKeys(GetLayout(Settings.Data.KeyViewerStyle));
+            if (Settings.Data.StreamerMode)
             {
                 if (Kps != null) Kps.gameObject.SetActive(false);
                 if (Total != null) Total.gameObject.SetActive(false);
             }
-            if (Settings.CustomPositionEnabled)
+            if (Settings.Data.CustomPositionEnabled)
                 ResetKeyViewerPosition();
             RefreshAllCountDisplay();
         }
@@ -784,9 +784,9 @@ namespace JipperKeyViewer.KeyViewer
                 }
             }
             rainSystem.ClearPool();
-            int footSize = FootKeySize(Settings.FootKeyViewerStyle);
+            int footSize = FootKeySize(Settings.Data.FootKeyViewerStyle);
             if (footSize > 0) InitializeFootKeyViewer(footSize);
-            if (Settings.CustomPositionEnabled)
+            if (Settings.Data.CustomPositionEnabled)
                 ResetFootKeyViewerPosition();
             RefreshAllCountDisplay();
         }
@@ -796,15 +796,15 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static KeyCode[] GetKeyCode()
         {
-            return Settings.KeyViewerStyle switch
+            return Settings.Data.KeyViewerStyle switch
             {
-                KeyviewerStyle.Key8 => Settings.key8,
-                KeyviewerStyle.Key12 => Settings.key12,
-                KeyviewerStyle.Key14 => Settings.key14,
-                KeyviewerStyle.Key16 => Settings.key16,
-                KeyviewerStyle.Key20 => Settings.key20,
-                KeyviewerStyle.Key10 => Settings.key10,
-                _ => Settings.key16
+                KeyviewerStyle.Key8 => Settings.Data.key8,
+                KeyviewerStyle.Key12 => Settings.Data.key12,
+                KeyviewerStyle.Key14 => Settings.Data.key14,
+                KeyviewerStyle.Key16 => Settings.Data.key16,
+                KeyviewerStyle.Key20 => Settings.Data.key20,
+                KeyviewerStyle.Key10 => Settings.Data.key10,
+                _ => Settings.Data.key16
             };
         }
 
@@ -813,16 +813,16 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static KeyCode[] GetFootKeyCode()
         {
-            return Settings.FootKeyViewerStyle switch
+            return Settings.Data.FootKeyViewerStyle switch
             {
-                FootKeyviewerStyle.Key2 => Settings.footkey2,
-                FootKeyviewerStyle.Key4 => Settings.footkey4,
-                FootKeyviewerStyle.Key6 => Settings.footkey6,
-                FootKeyviewerStyle.Key8 => Settings.footkey8,
-                FootKeyviewerStyle.Key10 => Settings.footkey10,
-                FootKeyviewerStyle.Key12 => Settings.footkey12,
-                FootKeyviewerStyle.Key14 => Settings.footkey14,
-                FootKeyviewerStyle.Key16 => Settings.footkey16,
+                FootKeyviewerStyle.Key2 => Settings.Data.footkey2,
+                FootKeyviewerStyle.Key4 => Settings.Data.footkey4,
+                FootKeyviewerStyle.Key6 => Settings.Data.footkey6,
+                FootKeyviewerStyle.Key8 => Settings.Data.footkey8,
+                FootKeyviewerStyle.Key10 => Settings.Data.footkey10,
+                FootKeyviewerStyle.Key12 => Settings.Data.footkey12,
+                FootKeyviewerStyle.Key14 => Settings.Data.footkey14,
+                FootKeyviewerStyle.Key16 => Settings.Data.footkey16,
                 _ => new KeyCode[0]
             };
         }
@@ -832,15 +832,15 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static KeyCode[] GetGhostKeyCode()
         {
-            return Settings.KeyViewerStyle switch
+            return Settings.Data.KeyViewerStyle switch
             {
-                KeyviewerStyle.Key8 => Settings.GhostKey8,
-                KeyviewerStyle.Key10 => Settings.GhostKey10,
-                KeyviewerStyle.Key12 => Settings.GhostKey12,
-                KeyviewerStyle.Key14 => Settings.GhostKey14,
-                KeyviewerStyle.Key16 => Settings.GhostKey16,
-                KeyviewerStyle.Key20 => Settings.GhostKey20,
-                _ => Settings.GhostKey16
+                KeyviewerStyle.Key8 => Settings.Data.GhostKey8,
+                KeyviewerStyle.Key10 => Settings.Data.GhostKey10,
+                KeyviewerStyle.Key12 => Settings.Data.GhostKey12,
+                KeyviewerStyle.Key14 => Settings.Data.GhostKey14,
+                KeyviewerStyle.Key16 => Settings.Data.GhostKey16,
+                KeyviewerStyle.Key20 => Settings.Data.GhostKey20,
+                _ => Settings.Data.GhostKey16
             };
         }
 
@@ -849,15 +849,15 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static string[] GetKeyText()
         {
-            return Settings.KeyViewerStyle switch
+            return Settings.Data.KeyViewerStyle switch
             {
-                KeyviewerStyle.Key8 => Settings.key8Text,
-                KeyviewerStyle.Key12 => Settings.key12Text,
-                KeyviewerStyle.Key14 => Settings.key14Text,
-                KeyviewerStyle.Key16 => Settings.key16Text,
-                KeyviewerStyle.Key20 => Settings.key20Text,
-                KeyviewerStyle.Key10 => Settings.key10Text,
-                _ => Settings.key16Text
+                KeyviewerStyle.Key8 => Settings.Data.key8Text,
+                KeyviewerStyle.Key12 => Settings.Data.key12Text,
+                KeyviewerStyle.Key14 => Settings.Data.key14Text,
+                KeyviewerStyle.Key16 => Settings.Data.key16Text,
+                KeyviewerStyle.Key20 => Settings.Data.key20Text,
+                KeyviewerStyle.Key10 => Settings.Data.key10Text,
+                _ => Settings.Data.key16Text
             };
         }
 
@@ -866,16 +866,16 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static string[] GetFootKeyText()
         {
-            return Settings.FootKeyViewerStyle switch
+            return Settings.Data.FootKeyViewerStyle switch
             {
-                FootKeyviewerStyle.Key2 => Settings.footkey2Text,
-                FootKeyviewerStyle.Key4 => Settings.footkey4Text,
-                FootKeyviewerStyle.Key6 => Settings.footkey6Text,
-                FootKeyviewerStyle.Key8 => Settings.footkey8Text,
-                FootKeyviewerStyle.Key10 => Settings.footkey10Text,
-                FootKeyviewerStyle.Key12 => Settings.footkey12Text,
-                FootKeyviewerStyle.Key14 => Settings.footkey14Text,
-                FootKeyviewerStyle.Key16 => Settings.footkey16Text,
+                FootKeyviewerStyle.Key2 => Settings.Data.footkey2Text,
+                FootKeyviewerStyle.Key4 => Settings.Data.footkey4Text,
+                FootKeyviewerStyle.Key6 => Settings.Data.footkey6Text,
+                FootKeyviewerStyle.Key8 => Settings.Data.footkey8Text,
+                FootKeyviewerStyle.Key10 => Settings.Data.footkey10Text,
+                FootKeyviewerStyle.Key12 => Settings.Data.footkey12Text,
+                FootKeyviewerStyle.Key14 => Settings.Data.footkey14Text,
+                FootKeyviewerStyle.Key16 => Settings.Data.footkey16Text,
                 _ => new string[0]
             };
         }
@@ -885,7 +885,7 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private static byte[] GetBackSequence()
         {
-            return Settings.KeyViewerStyle switch
+            return Settings.Data.KeyViewerStyle switch
             {
                 KeyviewerStyle.Key8 => BackSequence8,
                 KeyviewerStyle.Key12 => BackSequence12,
@@ -900,7 +900,7 @@ namespace JipperKeyViewer.KeyViewer
         /// <summary>Format count with thousands separator if enabled / 千分位格式化数字</summary>
         private static string FormatCount(int count)
         {
-            return Settings.EnableCountFormatting ? count.ToString("N0") : count.ToString();
+            return Settings.Data.EnableCountFormatting ? count.ToString("N0") : count.ToString();
         }
 
         /// <summary>Refresh all key value displays (count or per-key KPS) / 刷新所有按键数值显示（计数或每键 KPS）</summary>
@@ -911,20 +911,20 @@ namespace JipperKeyViewer.KeyViewer
             {
                 if (Keys[i] != null && Keys[i].value != null)
                 {
-                    if (Settings.EnablePerKeyKps)
+                    if (Settings.Data.EnablePerKeyKps)
                         Keys[i].value.text = (keyPressTimes != null && i < keyPressTimes.Length && keyPressTimes[i] != null) ? keyPressTimes[i].Count.ToString() : "0";
                     else
-                        Keys[i].value.text = FormatCount(Settings.Count[i]);
+                        Keys[i].value.text = FormatCount(Settings.Data.Count[i]);
                 }
             }
             if (Total != null && Total.value != null)
-                Total.value.text = FormatCount(Settings.TotalCount);
+                Total.value.text = FormatCount(Settings.Data.TotalCount);
         }
 
         public void AutoAssignRainbowColors()
         {
             int n = 38;
-            Settings.EnablePerKeyColors = true;
+            Settings.Data.EnablePerKeyColors = true;
             for (int i = 0; i < n; i++)
             {
                 float hue = i * 0.618033988f;
@@ -948,13 +948,13 @@ namespace JipperKeyViewer.KeyViewer
                 }
                 Color baseColor = new Color(r, g, b);
                 float bright = baseColor.grayscale > 0.5f ? 0f : 1f;
-                Settings.PerKeyBackground[i] = baseColor;
-                Settings.PerKeyBackgroundClicked[i] = Color.Lerp(baseColor, Color.white, 0.5f);
-                Settings.PerKeyOutline[i] = baseColor;
-                Settings.PerKeyOutlineClicked[i] = Color.Lerp(baseColor, Color.white, 0.7f);
-                Settings.PerKeyText[i] = new Color(bright, bright, bright);
-                Settings.PerKeyTextClicked[i] = new Color(1f - bright, 1f - bright, 1f - bright);
-                Settings.PerKeyRainColor[i] = baseColor;
+                Settings.Data.PerKeyBackground[i] = baseColor;
+                Settings.Data.PerKeyBackgroundClicked[i] = Color.Lerp(baseColor, Color.white, 0.5f);
+                Settings.Data.PerKeyOutline[i] = baseColor;
+                Settings.Data.PerKeyOutlineClicked[i] = Color.Lerp(baseColor, Color.white, 0.7f);
+                Settings.Data.PerKeyText[i] = new Color(bright, bright, bright);
+                Settings.Data.PerKeyTextClicked[i] = new Color(1f - bright, 1f - bright, 1f - bright);
+                Settings.Data.PerKeyRainColor[i] = baseColor;
             }
             ResetKeyViewer();
             ResetFootKeyViewer();

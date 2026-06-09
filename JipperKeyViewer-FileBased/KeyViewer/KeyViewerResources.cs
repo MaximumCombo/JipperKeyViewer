@@ -80,8 +80,8 @@ namespace JipperKeyViewer.KeyViewer
             ScanCustomFonts();
             LinkFallbackFonts();
 
-            if (Settings.FontIndex >= fontList.Count)
-                Settings.FontIndex = 0;
+            if (Settings.Data.FontIndex >= fontList.Count)
+                Settings.Data.FontIndex = 0;
 
             fontNameIndex = new Dictionary<string, int>(fontList.Count);
             for (int i = 0; i < fontList.Count; i++)
@@ -205,7 +205,7 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         private TMP_FontAsset GetCurrentFont()
         {
-            return fontList.Count > 0 ? fontList[Mathf.Clamp(Settings.FontIndex, 0, fontList.Count - 1)].font : null;
+            return fontList.Count > 0 ? fontList[Mathf.Clamp(Settings.Data.FontIndex, 0, fontList.Count - 1)].font : null;
         }
 
         /// <summary>
@@ -217,11 +217,13 @@ namespace JipperKeyViewer.KeyViewer
             TMP_FontAsset currentFont = GetCurrentFont();
             if (currentFont == null) return;
             Material shadowMat = GetShadowMaterial(currentFont);
+            FontStyles style = (FontStyles)Settings.Data.FontStyleFlags;
             void UpdateText(TMP_Text t)
             {
                 if (t == null) return;
                 t.font = currentFont;
                 t.fontMaterial = shadowMat;
+                t.fontStyle = style;
             }
             if (Keys != null)
             {

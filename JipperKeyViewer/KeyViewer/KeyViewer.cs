@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -87,6 +88,8 @@ namespace JipperKeyViewer.KeyViewer
         bool GhostRainChangeExpanded;
         /// <summary>Whether the text change section in settings is expanded / 设置中文本更改区域是否展开</summary>
         bool TextChangeExpanded;
+        /// <summary>Whether the rain effect section in settings is expanded / 设置中雨线效果区域是否展开</summary>
+        bool RainExpanded;
         /// <summary>Per-color-section expanded state in settings / 设置中每个颜色区域的展开状态</summary>
         bool[] ColorExpanded;
         /// <summary>Currently selected key index for rebinding (-1 = none) / 当前为重新绑定选中的按键索引（-1 = 无）</summary>
@@ -108,6 +111,32 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
         static string configPath;
+
+        /// <summary>Path to the profiles directory / 配置目录路径</summary>
+        static string ProfileDir
+        {
+            get
+            {
+                if (profileDir == null)
+                {
+                    string modPath = Path.GetDirectoryName(Main.Mod?.Path);
+                    profileDir = Path.Combine(modPath ?? Application.persistentDataPath, "config", "profiles");
+                }
+                return profileDir;
+            }
+        }
+        static string profileDir;
+
+        /// <summary>Sanitize a profile name for use as a filename / 将配置名称净化用于文件名</summary>
+        static string SanitizeFileName(string name)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return string.IsNullOrWhiteSpace(name) ? "Unnamed" : name;
+        }
+
+        /// <summary>Get the full path to a profile JSON file / 获取配置 JSON 文件的完整路径</summary>
+        static string GetProfilePath(string name) => Path.Combine(ProfileDir, SanitizeFileName(name) + ".json");
 
         /// <summary>Cached background sprite from AssetBundle / 从 AssetBundle 缓存的背景精灵</summary>
         Sprite keyBackgroundSprite;
@@ -165,7 +194,7 @@ namespace JipperKeyViewer.KeyViewer
             rainSystem = new RainSystem(Settings);
             TryLoadResources();
             rainSystem.GhostRainSprite = ghostRainSprite;
-            wasEnabled = Settings.Enabled;
+            wasEnabled = Settings.Data.Enabled;
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -174,10 +203,10 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         void RestoreFontOnce()
         {
-            if (fontNameIndex == null || fontRestored || string.IsNullOrEmpty(Settings.FontName)) return;
-            if (fontNameIndex.TryGetValue(Settings.FontName, out int idx))
+            if (fontNameIndex == null || fontRestored || string.IsNullOrEmpty(Settings.Data.FontName)) return;
+            if (fontNameIndex.TryGetValue(Settings.Data.FontName, out int idx))
             {
-                Settings.FontIndex = idx;
+                Settings.Data.FontIndex = idx;
                 UpdateAllFonts();
                 SaveSettings();
             }
@@ -189,9 +218,9 @@ namespace JipperKeyViewer.KeyViewer
         /// </summary>
         void OnEnable()
         {
-            if (Settings.Enabled) EnableKeyViewer();
+            if (Settings.Data.Enabled) EnableKeyViewer();
             else DisableKeyViewer();
-            if (Settings.CustomPositionEnabled)
+            if (Settings.Data.CustomPositionEnabled)
             {
                 ResetKeyViewerPosition();
                 ResetFootKeyViewerPosition();
@@ -227,8 +256,8 @@ namespace JipperKeyViewer.KeyViewer
             SaveSettings();
             for (int i = fontList.Count - 1; i >= 0; i--)
                 if (fontList[i].font == null) fontList.RemoveAt(i);
-            if (fontList.Count == 0 || Settings.FontIndex >= fontList.Count)
-                Settings.FontIndex = 0;
+            if (fontList.Count == 0 || Settings.Data.FontIndex >= fontList.Count)
+                Settings.Data.FontIndex = 0;
             fontRestored = false;
             LinkFallbackFonts();
             rainSystem.ClearActiveDrops(Keys);
@@ -250,14 +279,14 @@ namespace JipperKeyViewer.KeyViewer
             // Skip all processing when game window is not focused / 窗口未激活时跳过所有处理
             if (!Application.isFocused) return;
 
-            bool enabled = Settings.Enabled;
+            bool enabled = Settings.Data.Enabled;
             // Detect toggle change for enabled/disabled / 检测启用/禁用状态切换
             if (wasEnabled != enabled)
             {
                 if (enabled)
                 {
                     EnableKeyViewer();
-                    if (Settings.CustomPositionEnabled)
+                    if (Settings.Data.CustomPositionEnabled)
                     {
                         ResetKeyViewerPosition();
                         ResetFootKeyViewerPosition();
@@ -274,97 +303,350 @@ namespace JipperKeyViewer.KeyViewer
                 ProcessKpsInUpdate(now);            // Update KPS counter / 更新 KPS 计数器
                 ProcessPerKeyKpsInUpdate(now);       // Update per-key KPS / 更新每键 KPS
                 ProcessGhostKeysInUpdate();          // Process ghost key inputs / 处理鬼键输入
-                if (Settings.EnableRainEffect) rainSystem.UpdateEffects(Keys); // Update rain drop positions / 更新雨滴位置
+                if (Settings.Data.EnableRainEffect) rainSystem.UpdateEffects(Keys); // Update rain drop positions / 更新雨滴位置
             }
         }
 
         // ======================== Config Management / 配置管理 ========================
 
-        /// <summary>
-        /// Load settings from JSON file, with v1→v2 migration for normalized coordinates / 从 JSON 文件加载设置，支持 v1→v2 归一化坐标迁移
-        /// </summary>
         private void LoadSettings()
         {
             string directory = Path.GetDirectoryName(ConfigPath);
             if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-            if (File.Exists(ConfigPath))
-            {
-                try
-                {
-                    string json = File.ReadAllText(ConfigPath);
-                    Settings = JsonUtility.FromJson<KeyViewerSettings>(json);
-                    if (Settings != null)
-                    {
-                        // v1→v2: migrate absolute pixel offsets to normalized 0-1 (X: 0=left 1=right, Y: 0=top 1=bottom)
-                        // v1→v2：将绝对像素偏移迁移到归一化 0-1 坐标（X：0=左 1=右，Y：0=顶 1=底）
-                        if (Settings.Version < 2)
-                        {
-                            const float refW = 1920f, refH = 1080f;
-                            float Clamp01(float v) => v < 0 ? 0 : (v > 1 ? 1 : v);
-                            Settings.MainKeyViewerPosition = new Vector2(
-                                Clamp01(Settings.MainKeyViewerPosition.x / refW),
-                                1f - Clamp01(Settings.MainKeyViewerPosition.y / refH));
-                            Settings.FootKeyViewerPosition = new Vector2(
-                                Clamp01(Settings.FootKeyViewerPosition.x / refW),
-                                1f - Clamp01(Settings.FootKeyViewerPosition.y / refH));
-                            Settings.Version = 2;
-                            SaveSettings();
-                        }
-                        // Ensure arrays are initialized (prevents null refs from old saves) / 确保数组已初始化（防止旧存档的空引用）
-                        Settings.key8Text = Settings.key8Text ?? new string[8];
-                        Settings.key10Text = Settings.key10Text ?? new string[10];
-                        Settings.key12Text = Settings.key12Text ?? new string[12];
-                        Settings.key14Text = Settings.key14Text ?? new string[14];
-                        Settings.key16Text = Settings.key16Text ?? new string[16];
-                        Settings.key20Text = Settings.key20Text ?? new string[20];
-                        Settings.footkey2Text = Settings.footkey2Text ?? new string[2];
-                        Settings.footkey4Text = Settings.footkey4Text ?? new string[4];
-                        Settings.footkey6Text = Settings.footkey6Text ?? new string[6];
-                        Settings.footkey8Text = Settings.footkey8Text ?? new string[8];
-                        Settings.footkey10Text = Settings.footkey10Text ?? new string[10];
-                        Settings.footkey12Text = Settings.footkey12Text ?? new string[12];
-                        Settings.footkey14Text = Settings.footkey14Text ?? new string[14];
-                        Settings.footkey16Text = Settings.footkey16Text ?? new string[16];
-                        Settings.Count = Settings.Count ?? new int[36];
-                        if (Settings.PerKeyBackground == null || Settings.PerKeyBackground.Length != 38)
-                            Settings.InitPerKeyColors();
-                    }
-                    else
-                    {
-                        Main.Mod.Logger.Error("Failed to parse settings file (empty or corrupt), creating new settings");
-                        Settings = new KeyViewerSettings();
-                        SaveSettings();
-                    }
-                }
-                catch (Exception e)
-                {
-                    Main.Mod.Logger.Error($"Failed to load settings: {e.Message}");
-                    Settings = new KeyViewerSettings();
-                }
-            }
-            else
+
+            if (!File.Exists(ConfigPath))
             {
                 Settings = new KeyViewerSettings();
                 SaveSettings();
+                return;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(ConfigPath);
+                Settings = JsonUtility.FromJson<KeyViewerSettings>(json);
+                if (Settings == null)
+                {
+                    Main.Mod.Logger.Error("Failed to parse settings file (empty or corrupt), creating new settings");
+                    Settings = new KeyViewerSettings();
+                    return;
+                }
+
+                // Backward compat: old flat JSON had profile fields directly on KeyViewerSettings,
+                // now they live in ProfileData. Overwrite Data from the flat JSON to preserve them.
+                JsonUtility.FromJsonOverwrite(json, Settings.Data);
+
+                if (Settings.Version < 2) MigrateV1toV2();
+                if (Settings.Version < 3) MigrateV2toV3();
+                else LoadProfileFromMeta();
+
+                EnsureSettingsArrays();
+                SyncProfilesWithDisk();
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"Failed to load settings: {e.Message}");
+                Settings = new KeyViewerSettings();
             }
         }
 
+        private void MigrateV1toV2()
+        {
+            const float refW = 1920f, refH = 1080f;
+            float Clamp01(float v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+            Settings.Data.MainKeyViewerPosition = new Vector2(
+                Clamp01(Settings.Data.MainKeyViewerPosition.x / refW),
+                1f - Clamp01(Settings.Data.MainKeyViewerPosition.y / refH));
+            Settings.Data.FootKeyViewerPosition = new Vector2(
+                Clamp01(Settings.Data.FootKeyViewerPosition.x / refW),
+                1f - Clamp01(Settings.Data.FootKeyViewerPosition.y / refH));
+            Settings.Version = 2;
+        }
+
+        private void MigrateV2toV3()
+        {
+            Main.Mod.Logger.Log("Migrating settings v2 → v3: creating Default profile");
+            Settings.Version = 3;
+            Settings.CurrentProfile = "Default";
+            Settings.ProfileNames = new[] { "Default" };
+            EnsureSettingsArrays();
+            SaveCurrentProfile();
+            SaveMetaOnly();
+            Main.Mod.Logger.Log("Migration v2→v3 complete");
+        }
+
+        private void LoadProfileFromMeta()
+        {
+            string profileName = !string.IsNullOrEmpty(Settings.CurrentProfile)
+                ? Settings.CurrentProfile : "Default";
+            if (File.Exists(GetProfilePath(profileName)))
+            {
+                LoadProfile(profileName);
+                Settings.CurrentProfile = profileName;
+                EnsureSettingsArrays();
+            }
+            else
+            {
+                Main.Mod.Logger.Warning($"Profile '{profileName}' not found, creating new profile");
+                Settings.CurrentProfile = profileName;
+                if (Settings.ProfileNames == null || Settings.ProfileNames.Length == 0)
+                    Settings.ProfileNames = new[] { profileName };
+                EnsureSettingsArrays();
+                SaveCurrentProfile();
+            }
+        }
+
+        /// <summary>Ensure all settings arrays are initialized / 确保所有设置数组已初始化</summary>
+        private static void EnsureSettingsArrays()
+        {
+            Settings.Data.key8Text = Settings.Data.key8Text ?? new string[8];
+            Settings.Data.key10Text = Settings.Data.key10Text ?? new string[10];
+            Settings.Data.key12Text = Settings.Data.key12Text ?? new string[12];
+            Settings.Data.key14Text = Settings.Data.key14Text ?? new string[14];
+            Settings.Data.key16Text = Settings.Data.key16Text ?? new string[16];
+            Settings.Data.key20Text = Settings.Data.key20Text ?? new string[20];
+            Settings.Data.footkey2Text = Settings.Data.footkey2Text ?? new string[2];
+            Settings.Data.footkey4Text = Settings.Data.footkey4Text ?? new string[4];
+            Settings.Data.footkey6Text = Settings.Data.footkey6Text ?? new string[6];
+            Settings.Data.footkey8Text = Settings.Data.footkey8Text ?? new string[8];
+            Settings.Data.footkey10Text = Settings.Data.footkey10Text ?? new string[10];
+            Settings.Data.footkey12Text = Settings.Data.footkey12Text ?? new string[12];
+            Settings.Data.footkey14Text = Settings.Data.footkey14Text ?? new string[14];
+            Settings.Data.footkey16Text = Settings.Data.footkey16Text ?? new string[16];
+            Settings.Data.Count = Settings.Data.Count ?? new int[36];
+            if (Settings.Data.PerKeyBackground == null || Settings.Data.PerKeyBackground.Length != 38)
+                Settings.Data.InitPerKeyColors();
+        }
+
+        private void ClearKpsTimers()
+        {
+            PressTimes?.Clear();
+            if (keyPressTimes != null)
+                for (int i = 0; i < keyPressTimes.Length; i++)
+                    keyPressTimes[i]?.Clear();
+            if (lastPerKeyKps != null)
+                for (int i = 0; i < lastPerKeyKps.Length; i++)
+                    lastPerKeyKps[i] = 0;
+            lastKps = -1;
+            _hasKeyPressActivity = false;
+        }
+
         /// <summary>
-        /// Save current settings to JSON file / 将当前设置保存到 JSON 文件
+        /// Save current settings: meta + current profile / 保存当前设置：元数据 + 当前配置
         /// </summary>
         public void SaveSettings()
         {
             try
             {
-                string directory = Path.GetDirectoryName(ConfigPath);
-                if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-                string json = JsonUtility.ToJson(Settings, true);
-                File.WriteAllText(ConfigPath, json);
+                SaveCurrentProfile();
+                SaveMetaOnly();
             }
             catch (Exception e)
             {
                 Main.Mod.Logger.Error($"Failed to save settings: {e.Message}");
             }
         }
+
+        /// <summary>
+        /// Save only the meta file (Settings.Data.json) — Version, CurrentProfile, ProfileNames, Language / 仅保存元数据文件
+        /// </summary>
+        private void SaveMetaOnly()
+        {
+            string directory = Path.GetDirectoryName(ConfigPath);
+            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+            string metaJson = JsonUtility.ToJson(new SettingsMeta
+            {
+                Version = Settings.Version,
+                CurrentProfile = Settings.CurrentProfile,
+                ProfileNames = Settings.ProfileNames,
+                Language = Settings.Language
+            }, true);
+            File.WriteAllText(ConfigPath, metaJson);
+        }
+
+        /// <summary>
+        /// Save the current profile to its file / 将当前配置保存到文件
+        /// </summary>
+        private void SaveCurrentProfile()
+        {
+            if (!Directory.Exists(ProfileDir)) Directory.CreateDirectory(ProfileDir);
+            string profilePath = GetProfilePath(Settings.CurrentProfile);
+            string json = JsonUtility.ToJson(Settings.Data, true);
+            File.WriteAllText(profilePath, json);
+        }
+
+        /// <summary>
+        /// Load a named profile into Settings.Data / 加载指定配置到 Settings.Data
+        /// </summary>
+        private bool LoadProfile(string name)
+        {
+            string profilePath = GetProfilePath(name);
+            if (!File.Exists(profilePath)) return false;
+            try
+            {
+                string json = File.ReadAllText(profilePath);
+                JsonUtility.FromJsonOverwrite(json, Settings.Data);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"Failed to load profile '{name}': {e.Message}");
+                return false;
+            }
+        }
+
+        private void SwitchProfile(string newName)
+        {
+            if (newName == Settings.CurrentProfile) return;
+            string oldName = Settings.CurrentProfile;
+            SaveCurrentProfile();
+            if (!LoadProfile(newName))
+            {
+                Main.Mod.Logger.Warning($"Failed to switch to profile '{newName}', staying on '{oldName}'");
+                LoadProfile(oldName);
+                return;
+            }
+            Settings.CurrentProfile = newName;
+            EnsureSettingsArrays();
+            ClearKpsTimers();
+            // Rebuild overlay for new settings
+            ResetKeyViewer();
+            ResetFootKeyViewer();
+            UpdateAllFonts();
+            UpdateAllKeyColors();
+            if (Settings.Data.StreamerMode)
+            {
+                if (Kps != null) Kps.gameObject.SetActive(false);
+                if (Total != null) Total.gameObject.SetActive(false);
+            }
+            SaveSettings();
+        }
+
+        /// <summary>
+        /// Delete a profile file (cannot delete the last one) / 删除配置文件（不能删除最后一个）
+        /// </summary>
+        private void DeleteProfile(string name)
+        {
+            if (Settings.ProfileNames == null || Settings.ProfileNames.Length <= 1) return;
+            // If deleting the current profile, switch to first available first / 如果删除的是当前配置，先切走
+            bool wasCurrent = Settings.CurrentProfile == name;
+            if (wasCurrent)
+            {
+                var others = new List<string>(Settings.ProfileNames);
+                others.Remove(name);
+                SwitchProfile(others[0]);
+            }
+            // Now delete the file and remove from list / 然后删文件和列表
+            try
+            {
+                string profilePath = GetProfilePath(name);
+                if (File.Exists(profilePath))
+                    File.Delete(profilePath);
+            }
+            catch (Exception e)
+            {
+                Main.Mod.Logger.Error($"Failed to delete profile file '{name}': {e.Message}");
+            }
+            var list = new List<string>(Settings.ProfileNames);
+            list.Remove(name);
+            Settings.ProfileNames = list.ToArray();
+            SaveMetaOnly();
+        }
+
+        /// <summary>
+        /// Rename a profile / 重命名配置
+        /// </summary>
+        private void RenameProfile(string oldName, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName)) return;
+            newName = SanitizeFileName(newName.Trim());
+            if (oldName == newName) return;
+            if (Settings.ProfileNames != null && Settings.ProfileNames.Any(p => SanitizeFileName(p) == newName)) return;
+            string oldPath = GetProfilePath(oldName);
+            string newPath = GetProfilePath(newName);
+            if (oldPath != newPath)
+            {
+                try
+                {
+                    if (File.Exists(oldPath))
+                    {
+                        if (File.Exists(newPath))
+                            File.Delete(newPath);
+                        File.Move(oldPath, newPath);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Main.Mod.Logger.Error($"Failed to rename profile file '{oldName}' → '{newName}': {e.Message}");
+                }
+            }
+            var list = new List<string>(Settings.ProfileNames);
+            int idx = list.IndexOf(oldName);
+            if (idx >= 0) list[idx] = newName;
+            else list.Add(newName);
+            Settings.ProfileNames = list.ToArray();
+            if (Settings.CurrentProfile == oldName)
+                Settings.CurrentProfile = newName;
+            SaveSettings();
+        }
+
+        /// <summary>
+        /// Sync ProfileNames with actual files on disk — remove entries with no file, recreate Default if empty / 同步配置列表与磁盘文件 — 移除无对应文件的条目，空列表时重建 Default
+        /// </summary>
+        private void SyncProfilesWithDisk()
+        {
+            if (!Directory.Exists(ProfileDir))
+            {
+                Directory.CreateDirectory(ProfileDir);
+                Settings.ProfileNames = new[] { "Default" };
+                Settings.CurrentProfile = "Default";
+                SaveCurrentProfile();
+                SaveMetaOnly();
+                return;
+            }
+            var valid = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in Settings.ProfileNames ?? Array.Empty<string>())
+            {
+                string sp = SanitizeFileName(p);
+                if (File.Exists(GetProfilePath(p)) && seen.Add(sp))
+                    valid.Add(p);
+            }
+            var nameSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            nameSeen.UnionWith(valid.Select(v => SanitizeFileName(v)));
+            foreach (string filePath in Directory.GetFiles(ProfileDir, "*.json"))
+            {
+                string name = Path.GetFileNameWithoutExtension(filePath);
+                if (nameSeen.Add(SanitizeFileName(name)))
+                    valid.Add(name);
+            }
+            bool changed = valid.Count != (Settings.ProfileNames?.Length ?? 0)
+                || !valid.SequenceEqual(Settings.ProfileNames ?? Array.Empty<string>());
+            if (valid.Count == 0)
+            {
+                valid.Add("Default");
+                Settings.CurrentProfile = "Default";
+                SaveCurrentProfile();
+                changed = true;
+            }
+            Settings.ProfileNames = valid.ToArray();
+            if (!valid.Contains(Settings.CurrentProfile))
+            {
+                SwitchProfile(valid[0]);
+                return;
+            }
+            if (changed)
+                SaveMetaOnly();
+        }
+
+        [System.Serializable]
+        private class SettingsMeta
+        {
+            public int Version = 3;
+            public string CurrentProfile = "Default";
+            public string[] ProfileNames = new[] { "Default" };
+            public string Language = "en";
+        }
+
     }
 }

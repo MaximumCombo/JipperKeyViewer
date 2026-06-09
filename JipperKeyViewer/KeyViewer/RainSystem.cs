@@ -57,22 +57,22 @@ namespace JipperKeyViewer.KeyViewer
 
         private void SyncCachedSpeeds()
         {
-            if (cachedRainSpeed1 == settings.RainSpeedRow1 && cachedRainSpeed2 == settings.RainSpeedRow2 &&
-                cachedRainSpeed3 == settings.RainSpeedRow3 && cachedRainHeight1 == settings.RainHeightRow1 &&
-                cachedRainHeight2 == settings.RainHeightRow2 && cachedRainHeight3 == settings.RainHeightRow3)
+            if (cachedRainSpeed1 == settings.Data.RainSpeedRow1 && cachedRainSpeed2 == settings.Data.RainSpeedRow2 &&
+                cachedRainSpeed3 == settings.Data.RainSpeedRow3 && cachedRainHeight1 == settings.Data.RainHeightRow1 &&
+                cachedRainHeight2 == settings.Data.RainHeightRow2 && cachedRainHeight3 == settings.Data.RainHeightRow3)
                 return;
-            rowSpeeds[0] = settings.RainSpeedRow1 / 300f;
-            rowSpeeds[1] = settings.RainSpeedRow2 / 300f;
-            rowSpeeds[2] = settings.RainSpeedRow3 / 300f;
-            rowHeights[0] = settings.RainHeightRow1;
-            rowHeights[1] = settings.RainHeightRow2;
-            rowHeights[2] = settings.RainHeightRow3;
-            cachedRainSpeed1 = settings.RainSpeedRow1;
-            cachedRainSpeed2 = settings.RainSpeedRow2;
-            cachedRainSpeed3 = settings.RainSpeedRow3;
-            cachedRainHeight1 = settings.RainHeightRow1;
-            cachedRainHeight2 = settings.RainHeightRow2;
-            cachedRainHeight3 = settings.RainHeightRow3;
+            rowSpeeds[0] = settings.Data.RainSpeedRow1 / 300f;
+            rowSpeeds[1] = settings.Data.RainSpeedRow2 / 300f;
+            rowSpeeds[2] = settings.Data.RainSpeedRow3 / 300f;
+            rowHeights[0] = settings.Data.RainHeightRow1;
+            rowHeights[1] = settings.Data.RainHeightRow2;
+            rowHeights[2] = settings.Data.RainHeightRow3;
+            cachedRainSpeed1 = settings.Data.RainSpeedRow1;
+            cachedRainSpeed2 = settings.Data.RainSpeedRow2;
+            cachedRainSpeed3 = settings.Data.RainSpeedRow3;
+            cachedRainHeight1 = settings.Data.RainHeightRow1;
+            cachedRainHeight2 = settings.Data.RainHeightRow2;
+            cachedRainHeight3 = settings.Data.RainHeightRow3;
         }
 
         private void UpdateSingleRainDrop(RawRain rain, Key key, int j, int row, float dtSec)
@@ -112,7 +112,7 @@ namespace JipperKeyViewer.KeyViewer
         {
             if (!r.fadingOut) return;
             r.fadeTimer += dtSec;
-            float t = Mathf.Clamp01(r.fadeTimer / settings.RainFadeDuration);
+            float t = Mathf.Clamp01(r.fadeTimer / settings.Data.RainFadeDuration);
             float a = 1f - (t * (2f - t));
             var c = r.graphic.color;
             c.a = a;
@@ -131,7 +131,7 @@ namespace JipperKeyViewer.KeyViewer
 
             float dFar = trailEdgeDist;
             float dNear = dFar - drawH;
-            float fp = settings.EnableRainGradient && !rain.isGhost ? settings.RainFadePx : 0f;
+            float fp = settings.Data.EnableRainGradient && !rain.isGhost ? settings.Data.RainFadePx : 0f;
             r.graphic.SetFadeParams(dNear, dFar, rowHeights[row], fp, false);
         }
 
@@ -161,8 +161,8 @@ namespace JipperKeyViewer.KeyViewer
             {
                 if (key.rainList[i].isGhost) continue;
                 key.rainList[i].growing = false;
-                if (settings.EnableRainFade && key.rainList[i].rainComponent != null)
-                    key.rainList[i].rainComponent.StartFadeOut(settings.RainFadeDuration);
+                if (settings.Data.EnableRainFade && key.rainList[i].rainComponent != null)
+                    key.rainList[i].rainComponent.StartFadeOut(settings.Data.RainFadeDuration);
                 break;
             }
         }
@@ -227,9 +227,9 @@ namespace JipperKeyViewer.KeyViewer
         {
             return color switch
             {
-                0 => ghost ? settings.GhostRainColor : settings.RainColor,
-                3 => ghost ? settings.GhostRainColor3 : settings.RainColor3,
-                _ => ghost ? settings.GhostRainColor2 : settings.RainColor2
+                0 => ghost ? settings.Data.GhostRainColor : settings.Data.RainColor,
+                3 => ghost ? settings.Data.GhostRainColor3 : settings.Data.RainColor3,
+                _ => ghost ? settings.Data.GhostRainColor2 : settings.Data.RainColor2
             };
         }
 
@@ -337,9 +337,9 @@ namespace JipperKeyViewer.KeyViewer
 
         private bool IsRainEnabledForKey(int keyIndex)
         {
-            if (keyIndex < 8) return settings.EnableRainForRow1;
-            if (keyIndex < 16) return settings.EnableRainForRow2;
-            if (keyIndex < 20) return settings.EnableRainForRow3;
+            if (keyIndex < 8) return settings.Data.EnableRainForRow1;
+            if (keyIndex < 16) return settings.Data.EnableRainForRow2;
+            if (keyIndex < 20) return settings.Data.EnableRainForRow3;
             return false;
         }
     }

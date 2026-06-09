@@ -71,6 +71,10 @@
     { "key": "open_config_folder", "en": "Open Config Folder", "zh": "打开配置文件夹", "ko": "설정 폴더 열기" },
     { "key": "open_font_folder", "en": "Open Font Folder", "zh": "打开字体文件夹", "ko": "글꼴 폴더 열기" },
     { "key": "rain_gradient", "en": "Rain Gradient Fade", "zh": "雨滴渐隐", "ko": "빗줄 그라데이션" },
-    { "key": "gradient_percent", "en": "Fade px", "zh": "渐隐像素", "ko": "페이드 px" }
+    { "key": "gradient_percent", "en": "Fade px", "zh": "渐隐像素", "ko": "페이드 px" },
+    { "key": "profile", "en": "Profile", "zh": "配置", "ko": "프로필" },
+    { "key": "save_as", "en": "Save As", "zh": "另存为", "ko": "다른 이름으로 저장" },
+    { "key": "rename", "en": "Rename", "zh": "重命名", "ko": "이름 바꾸기" },
+    { "key": "delete", "en": "Delete", "zh": "删除", "ko": "삭제" }
   ]
 }

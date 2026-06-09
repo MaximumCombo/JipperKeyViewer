@@ -92,6 +92,10 @@ namespace JipperKeyViewer.KeyViewer
             ["open_font_folder"] = "Open Font Folder",
             ["kps_colors"] = "KPS Colors",
             ["total_colors"] = "Total Colors",
+            ["profile"] = "Profile",
+            ["save_as"] = "Save As",
+            ["rename"] = "Rename",
+            ["delete"] = "Delete",
         };
 
         /// <summary>Chinese translations dictionary / 中文字典</summary>
@@ -169,6 +173,10 @@ namespace JipperKeyViewer.KeyViewer
             ["open_font_folder"] = "打开字体文件夹",
             ["kps_colors"] = "KPS 颜色",
             ["total_colors"] = "Total 颜色",
+            ["profile"] = "配置",
+            ["save_as"] = "另存为",
+            ["rename"] = "重命名",
+            ["delete"] = "删除",
         };
 
         /// <summary>Korean translations dictionary / 韩文字典</summary>
@@ -246,6 +254,10 @@ namespace JipperKeyViewer.KeyViewer
             ["open_font_folder"] = "글꼴 폴더 열기",
             ["kps_colors"] = "KPS 색상",
             ["total_colors"] = "Total 색상",
+            ["profile"] = "프로필",
+            ["save_as"] = "다른 이름으로 저장",
+            ["rename"] = "이름 바꾸기",
+            ["delete"] = "삭제",
         };
 
         /// <summary>Path to the lang.json override file / lang.json 覆盖文件路径</summary>
@@ -273,10 +285,12 @@ namespace JipperKeyViewer.KeyViewer
             try
             {
                 string json = File.ReadAllText(path);
-                int entriesStart = FindEntriesStart(json);
-                if (entriesStart < 0) return;
-
-                int count = ParseEntries(json, entriesStart);
+                int count = ParseEntries(json);
+                if (count < 0)
+                {
+                    Main.Mod.Logger.Error($"I18n: 'entries' array not found in lang.json");
+                    return;
+                }
                 Main.Mod.Logger.Log($"I18n: loaded {count} entries from lang.json");
             }
             catch (Exception e)
@@ -285,88 +299,80 @@ namespace JipperKeyViewer.KeyViewer
             }
         }
 
-        private static int FindEntriesStart(string json)
+        private static int ParseEntries(string json)
         {
-            int start = json.IndexOf("\"entries\"");
-            if (start < 0)
-            {
-                Main.Mod.Logger.Error($"I18n: 'entries' key not found in lang.json");
-                return -1;
-            }
-            start = json.IndexOf('[', start);
-            if (start < 0)
-            {
-                Main.Mod.Logger.Error($"I18n: entries array not found in lang.json");
-                return -1;
-            }
-            return start;
-        }
-
-        private static int ParseEntries(string json, int start)
-        {
-            int braceDepth = 0;
-            int entryStart = -1;
+            int idx = json.IndexOf("\"entries\"", StringComparison.Ordinal);
+            if (idx < 0) return -1;
+            idx = json.IndexOf('[', idx);
+            if (idx < 0) return -1;
+            idx++;
             int count = 0;
-            for (int i = start + 1; i < json.Length; i++)
+            while (idx < json.Length)
             {
-                char c = json[i];
-                if (c == '{')
-                {
-                    if (braceDepth == 0) entryStart = i;
-                    braceDepth++;
-                }
-                else if (c == '}' && --braceDepth == 0 && entryStart >= 0)
-                {
-                    string block = json.Substring(entryStart, i - entryStart + 1);
-                    MergeEntry(ParseEntryBlock(block), ref count);
-                    entryStart = -1;
-                }
+                char c = json[idx];
+                if (c <= ' ') { idx++; continue; }
+                if (c == ']') break;
+                if (c != '{') { idx++; continue; }
+                int end = SkipObject(json, idx);
+                if (end < 0) break;
+                if (ParseEntry(json, idx, end))
+                    count++;
+                idx = end + 1;
             }
             return count;
         }
 
-        private static void MergeEntry(I18nEntry entry, ref int count)
+        private static int SkipObject(string json, int start)
         {
-            if (entry == null) return;
-            if (!string.IsNullOrEmpty(entry.en)) en[entry.key] = entry.en;
-            if (!string.IsNullOrEmpty(entry.zh)) zh[entry.key] = entry.zh;
-            if (!string.IsNullOrEmpty(entry.ko)) ko[entry.key] = entry.ko;
-            count++;
-        }
-
-        static string ExtractJsonStr(string json, string key)
-        {
-            int idx = json.IndexOf("\"" + key + "\"");
-            if (idx < 0) return null;
-            int colon = json.IndexOf(':', idx + key.Length + 2);
-            if (colon < 0) return null;
-            int quoteStart = json.IndexOf('"', colon);
-            if (quoteStart < 0) return null;
-            quoteStart++;
-            int quoteEnd = quoteStart;
-            while (quoteEnd < json.Length)
+            bool inStr = false;
+            int depth = 0;
+            for (int i = start; i < json.Length; i++)
             {
-                if (json[quoteEnd] == '\\') { quoteEnd += 2; continue; }
-                if (json[quoteEnd] == '"') break;
-                quoteEnd++;
+                char c = json[i];
+                if (inStr)
+                {
+                    if (c == '\\') i++;
+                    else if (c == '"') inStr = false;
+                }
+                else if (c == '"') inStr = true;
+                else if (c == '{') depth++;
+                else if (c == '}' && --depth == 0) return i;
             }
-            if (quoteEnd >= json.Length) return null;
-            string val = json.Substring(quoteStart, quoteEnd - quoteStart);
-            val = val.Replace("\\\"", "\"").Replace("\\\\", "\\");
-            return val;
+            return -1;
         }
 
-        static I18nEntry ParseEntryBlock(string block)
+        private static bool ParseEntry(string json, int start, int end)
         {
-            string k = ExtractJsonStr(block, "key");
-            if (string.IsNullOrEmpty(k)) return null;
-            return new I18nEntry
+            string key = ExtractStr(json, start, end, "key");
+            if (key == null) return false;
+            string enVal = ExtractStr(json, start, end, "en");
+            string zhVal = ExtractStr(json, start, end, "zh");
+            string koVal = ExtractStr(json, start, end, "ko");
+            if (!string.IsNullOrEmpty(enVal)) en[key] = enVal;
+            if (!string.IsNullOrEmpty(zhVal)) zh[key] = zhVal;
+            if (!string.IsNullOrEmpty(koVal)) ko[key] = koVal;
+            return true;
+        }
+
+        private static string ExtractStr(string json, int start, int end, string key)
+        {
+            int idx = json.IndexOf("\"" + key + "\"", start, end - start, StringComparison.Ordinal);
+            if (idx < 0) return null;
+            idx = json.IndexOf('"', idx + key.Length + 2);
+            if (idx < 0) return null;
+            idx++;
+            int valStart = idx;
+            while (idx < end)
             {
-                key = k,
-                en = ExtractJsonStr(block, "en"),
-                zh = ExtractJsonStr(block, "zh"),
-                ko = ExtractJsonStr(block, "ko")
-            };
+                char c = json[idx];
+                if (c == '\\') idx++;
+                else if (c == '"') break;
+                idx++;
+            }
+            if (idx >= end) return null;
+            string val = json.Substring(valStart, idx - valStart);
+            val = val.Replace("\\\"", "\"").Replace("\\\\", "\\").Replace("\\n", "\n").Replace("\\t", "\t");
+            return val;
         }
 
         /// <summary>Returns the currently active translation dictionary / 返回当前活跃的翻译字典</summary>
@@ -382,11 +388,4 @@ namespace JipperKeyViewer.KeyViewer
         }
     }
 
-    internal class I18nEntry
-    {
-        public string key;
-        public string en;
-        public string zh;
-        public string ko;
-    }
 }
